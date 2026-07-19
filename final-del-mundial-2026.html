@@ -1,0 +1,3789 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta
+    http-equiv="Content-Security-Policy"
+    content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src 'sha256-zuMi3nKzE+PQhzcCnaRTTGwVOZYZuQBjHACmBmaaFvs='; frame-src https://www.youtube-nocookie.com; connect-src 'none'; media-src 'none'; font-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none';"
+  >
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <title>Final del Mundial 2026 — Brainstorm</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      overscroll-behavior: none;
+    }
+    body {
+      background: var(--canvas);
+      color: rgba(255, 255, 255, 0.847);
+    }
+    #viewport {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      cursor: grab;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      background-color: var(--canvas);
+      background-image:
+        linear-gradient(to right, var(--grid) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+      background-size: 32px 32px;
+      background-position: 0 0;
+    }
+    #viewport.dragging { cursor: grabbing; }
+    #stage {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1452px;
+      height: 685px;
+      transform-origin: 0 0;
+      will-change: transform;
+      pointer-events: none;
+    }
+    #branches,
+    #node-shapes,
+    #nodes,
+    #map-notes {
+      position: absolute;
+      inset: 0;
+      width: 1452px;
+      height: 685px;
+      overflow: visible;
+    }
+    #branches,
+    #node-shapes {
+      display: block;
+      pointer-events: none;
+    }
+    #nodes {
+      margin: 0;
+      padding: 0;
+      border: 0;
+    }
+    #map-notes {
+      pointer-events: none;
+      overflow: visible;
+    }
+    .node {
+      position: absolute;
+      display: flex;
+      align-items: center;
+      min-width: 0;
+      margin: 0;
+      color: var(--node-text);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+      font-size: var(--node-font-size);
+      font-style: var(--node-font-style);
+      font-weight: var(--node-font-weight);
+      line-height: var(--node-line-height);
+      pointer-events: none;
+    }
+    .node[data-has-note="true"] {
+      pointer-events: auto;
+      cursor: pointer;
+    }
+    .node[data-has-note="true"]:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+    }
+    .node-title {
+      display: flex;
+      flex: 1 1 auto;
+      min-width: 0;
+      max-height: calc(var(--node-line-height) * 3);
+      flex-direction: column;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .node-line {
+      display: block;
+      height: var(--node-line-height);
+      min-height: var(--node-line-height);
+      overflow: hidden;
+      white-space: pre;
+      text-overflow: clip;
+    }
+    .node-media {
+      display: flex;
+      flex: 0 0 var(--media-size);
+      width: var(--media-size);
+      height: var(--media-size);
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .node-emoji {
+      font-family: "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+      font-size: var(--media-font-size);
+      font-style: normal;
+      font-weight: 400;
+      line-height: var(--media-size);
+      text-align: center;
+      white-space: nowrap;
+    }
+    .node-image,
+    .sticker-image {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    .node-image {
+      border-radius: 5px;
+      object-fit: cover;
+    }
+    .sticker-image { object-fit: contain; }
+    button, a { font: inherit; }
+    button { color: inherit; }
+    [hidden] { display: none !important; }
+    .note-sticker-icon {
+      display: block;
+      width: 16px;
+      height: 16px;
+      flex: 0 0 16px;
+      color: var(--accent);
+      opacity: 0.68;
+      pointer-events: none;
+    }
+    .map-note-marker {
+      position: absolute;
+      z-index: 3;
+      display: grid;
+      width: 16px;
+      height: 16px;
+      place-items: center;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      opacity: 0.62;
+      pointer-events: none;
+    }
+    .map-note-marker .note-sticker-icon {
+      width: 13px;
+      height: 13px;
+      flex-basis: 13px;
+    }
+    .map-note-marker .note-detail-line { display: none; }
+    .map-note-marker[data-saved-visible="false"] { opacity: 0.42; }
+    .note-body p { margin: 0 0 0.65em; }
+    .note-body p:last-child { margin-bottom: 0; }
+    .note-body ul,
+    .note-body ol {
+      margin: 0.25em 0 0.7em;
+      padding-left: 1.5em;
+    }
+    .note-body li + li { margin-top: 0.2em; }
+    .note-body a {
+      color: var(--accent);
+      text-decoration-thickness: 1px;
+      text-underline-offset: 0.14em;
+      overflow-wrap: anywhere;
+    }
+    .note-attachments {
+      display: grid;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .note-media {
+      min-width: 0;
+      margin: 0;
+    }
+    .note-media img {
+      display: block;
+      width: 100%;
+      max-height: 280px;
+      border-radius: 8px;
+      object-fit: contain;
+      background: rgba(127, 127, 127, 0.08);
+    }
+    .note-media figcaption {
+      margin-top: 6px;
+      color: var(--note-secondary);
+      font-size: 0.9em;
+    }
+    .youtube-card {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 10px;
+      width: 100%;
+      min-height: 76px;
+      align-items: center;
+      padding: 10px;
+      border: 1px solid var(--note-border);
+      border-radius: 10px;
+      background: rgba(127, 127, 127, 0.08);
+      color: inherit;
+      text-align: left;
+      cursor: pointer;
+    }
+    .youtube-host {
+      width: 100%;
+      min-height: 76px;
+    }
+    .youtube-host[hidden] { display: none; }
+    .youtube-card[hidden] { display: none; }
+    .youtube-card .play {
+      color: #E62117;
+      font-size: 28px;
+      line-height: 1;
+    }
+    .youtube-meta {
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    .youtube-meta strong { display: block; }
+    .youtube-meta small {
+      display: block;
+      margin-top: 3px;
+      color: var(--note-secondary);
+    }
+    .youtube-frame {
+      display: block;
+      width: 100%;
+      min-height: 200px;
+      aspect-ratio: 16 / 9;
+      border: 0;
+      border-radius: 10px;
+      background: #000;
+    }
+    .youtube-link {
+      display: inline-block;
+      margin-top: 6px;
+      color: var(--accent);
+      overflow-wrap: anywhere;
+    }
+    #viewer-controls {
+      position: fixed;
+      z-index: 100;
+      top: max(12px, env(safe-area-inset-top));
+      left: 50%;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      max-width: calc(100vw - 24px);
+      padding: 6px;
+      border: 1px solid var(--toolbar-border);
+      border-radius: 999px;
+      background: var(--toolbar-background);
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.16);
+      transform: translateX(-50%);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+    #viewer-controls button {
+      min-height: 32px;
+      padding: 5px 11px;
+      border: 0;
+      border-radius: 999px;
+      background: transparent;
+      cursor: pointer;
+    }
+    #viewer-controls button[aria-pressed="true"] {
+      background: var(--control-active);
+      color: var(--control-active-text);
+    }
+    #presentation-progress {
+      min-width: 4.5em;
+      padding: 0 8px;
+      color: var(--note-secondary);
+      font-variant-numeric: tabular-nums;
+      text-align: center;
+    }
+    #presentation {
+      --camera-x: 0px;
+      --camera-y: 0px;
+      --presentation-travel-duration: 440ms;
+      position: fixed;
+      z-index: 20;
+      inset: 0;
+      overflow: hidden;
+      background-color: var(--canvas);
+      background-image:
+        radial-gradient(circle at 50% 45%, var(--presentation-glow), transparent 52%),
+        linear-gradient(to right, var(--grid) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+      background-size: auto, 32px 32px, 32px 32px;
+      background-position:
+        center,
+        calc(50% - var(--camera-x)) calc(50% - var(--camera-y)),
+        calc(50% - var(--camera-x)) calc(50% - var(--camera-y));
+    }
+    #presentation-stage {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      overflow: clip;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    #presentation-world {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 1452px;
+      height: 685px;
+      transform-origin: 0 0;
+      will-change: auto;
+    }
+    #presentation-world-branches {
+      position: absolute;
+      z-index: 0;
+      inset: 0;
+      display: block;
+      width: 1452px;
+      height: 685px;
+      overflow: visible;
+      pointer-events: none;
+    }
+    #presentation-world-branches path {
+      transition:
+        opacity var(--presentation-travel-duration)
+        cubic-bezier(0.22, 0.8, 0.2, 1);
+      vector-effect: non-scaling-stroke;
+    }
+    .presentation-slide {
+      --presentation-render-scale: 1;
+      position: absolute;
+      z-index: 1;
+      overflow: visible;
+      opacity: 0.46;
+      pointer-events: none;
+      transform-origin: 0 0;
+      transition:
+        opacity var(--presentation-travel-duration)
+        cubic-bezier(0.22, 0.8, 0.2, 1);
+    }
+    .presentation-slide[data-position="current"] {
+      z-index: 4;
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .presentation-slide[data-position="current"]
+      .presentation-node-shape {
+      filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.22));
+    }
+    .presentation-slide[data-position="current"]
+      .presentation-node-front {
+      cursor: pointer;
+    }
+    .presentation-slide[data-position="previous"] {
+      z-index: 3;
+      opacity: 0.68;
+      cursor: pointer;
+      pointer-events: auto;
+    }
+    .presentation-slide[data-position="next"] {
+      z-index: 3;
+      opacity: 0.68;
+      cursor: pointer;
+      pointer-events: auto;
+    }
+    .presentation-slide[data-position="context"] {
+      cursor: default;
+    }
+    .presentation-slide:focus-visible {
+      outline: none;
+    }
+    .presentation-slide:focus-visible .presentation-node-selection {
+      opacity: 1;
+      stroke-width: 3.25;
+    }
+    .presentation-flip {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      transform-origin: center;
+      transform-style: preserve-3d;
+      transition: transform 640ms cubic-bezier(0.2, 0.76, 0.18, 1);
+      will-change: auto;
+    }
+    .presentation-slide[data-face="note"] .presentation-flip {
+      transform: perspective(720px) rotateY(180deg);
+    }
+    .presentation-node-front,
+    .presentation-note-back {
+      position: absolute;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+    }
+    .presentation-node-front {
+      inset: 0;
+      display: flex;
+      min-width: 0;
+      align-items: center;
+      gap: var(--rendered-node-gap, var(--node-gap));
+      padding:
+        var(--rendered-node-padding-y, var(--node-padding-y))
+        var(--rendered-node-padding-x, 16px);
+      color: var(--slide-text);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+      font-size: var(--rendered-slide-font-size, var(--slide-font-size));
+      font-style: var(--slide-font-style);
+      font-weight: var(--slide-font-weight);
+      line-height: var(--rendered-slide-line-height, var(--slide-line-height));
+    }
+    .presentation-node-shape {
+      position: absolute;
+      z-index: 0;
+      inset: 0;
+      display: block;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+      pointer-events: none;
+    }
+    .presentation-node-title,
+    .presentation-media {
+      position: relative;
+      z-index: 1;
+    }
+    .presentation-node-selection {
+      opacity: 0;
+      transition:
+        opacity var(--presentation-travel-duration)
+        cubic-bezier(0.22, 0.8, 0.2, 1);
+    }
+    .presentation-slide[data-position="current"] .presentation-node-selection {
+      opacity: 1;
+    }
+    .presentation-node-title {
+      display: flex;
+      flex: 1 1 auto;
+      min-width: 0;
+      max-height:
+        var(
+          --rendered-title-max-height,
+          calc(var(--slide-line-height) * 3)
+        );
+      flex-direction: column;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .presentation-node-title h1 {
+      margin: 0;
+      font: inherit;
+      font-style: var(--slide-font-style);
+      font-weight: var(--slide-font-weight);
+      line-height:
+        var(--rendered-slide-line-height, var(--slide-line-height));
+    }
+    .presentation-node-line {
+      display: block;
+      height: var(--rendered-slide-line-height, var(--slide-line-height));
+      min-height: var(--rendered-slide-line-height, var(--slide-line-height));
+      overflow: hidden;
+      white-space: pre;
+    }
+    .presentation-media {
+      display: flex;
+      flex: 0 0 var(--rendered-media-size, var(--presentation-media-size));
+      width: var(--rendered-media-size, var(--presentation-media-size));
+      height: var(--rendered-media-size, var(--presentation-media-size));
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      border-radius: 5px;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-size: contain;
+      font-size:
+        var(
+          --rendered-media-font-size,
+          calc(var(--presentation-media-size) - 4px)
+        );
+      font-style: normal;
+      font-weight: 400;
+      line-height: var(--rendered-media-size, var(--presentation-media-size));
+      text-align: center;
+    }
+    .presentation-note-indicator {
+      position: absolute;
+      z-index: 5;
+      top: 6px;
+      right: 7px;
+      display: inline-flex;
+      width: 26px;
+      height: 26px;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      color: var(--accent);
+      opacity: 0.84;
+      pointer-events: none;
+    }
+    .presentation-note-indicator .note-sticker-icon {
+      width: 22px;
+      height: 22px;
+      flex-basis: 22px;
+      opacity: 1;
+      filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.14));
+    }
+    .presentation-note-back {
+      top: 50%;
+      left: 50%;
+      display: flex;
+      width: 380px;
+      height: 360px;
+      flex-direction: column;
+      overflow: hidden;
+      border: 1px solid var(--note-border);
+      border-radius: 28px;
+      background: var(--note-background);
+      color: var(--note-text);
+      box-shadow: 0 22px 54px rgba(0, 0, 0, 0.26);
+      transform:
+        translate(-50%, -50%)
+        rotateY(180deg)
+        scale(var(--note-counter-scale, 1));
+    }
+    .presentation-note-header {
+      display: flex;
+      flex: 0 0 auto;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 18px 12px;
+      border-bottom: 1px solid var(--note-border);
+    }
+    .presentation-note-header strong {
+      min-width: 0;
+      overflow: hidden;
+      font-size: 16px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .presentation-note-header .presentation-note-indicator {
+      position: static;
+      display: inline-flex;
+      flex: 0 0 auto;
+    }
+    .presentation-note {
+      flex: 1 1 auto;
+      overflow: auto;
+      overscroll-behavior: contain;
+      padding: 18px;
+      font-size: 16px;
+      line-height: 1.5;
+      touch-action: pan-y;
+      user-select: text;
+      -webkit-user-select: text;
+    }
+    .presentation-note .note-media img {
+      max-height: 210px;
+    }
+    .presentation-note-back[aria-hidden="true"] {
+      pointer-events: none;
+    }
+    .presentation-node-front[aria-hidden="true"] {
+      pointer-events: none;
+    }
+    @media (max-width: 640px), (max-aspect-ratio: 4 / 5) {
+      .presentation-note-back {
+        width: 320px;
+        height: 390px;
+        border-radius: 24px;
+      }
+      #viewer-controls {
+        top: auto;
+        bottom: max(12px, env(safe-area-inset-bottom));
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .presentation-slide { transition: opacity 120ms linear; }
+      .presentation-flip {
+        transition: transform 220ms cubic-bezier(0.3, 0.7, 0.3, 1);
+      }
+      #presentation-world-branches path { transition: none; }
+      #stage { will-change: auto; }
+    }
+    .visually-hidden {
+      position: absolute !important;
+      width: 1px !important;
+      height: 1px !important;
+      padding: 0 !important;
+      margin: -1px !important;
+      overflow: hidden !important;
+      clip: rect(0, 0, 0, 0) !important;
+      white-space: nowrap !important;
+      border: 0 !important;
+    }
+  </style>
+</head>
+<body
+  style="--note-background: #1E1E1E; --note-text: rgba(255, 255, 255, 0.847); --note-secondary: #8B949E; --note-border: rgba(255, 255, 255, 0.186); --accent: #F7821B; --toolbar-background: rgba(30, 30, 30, 0.94); --toolbar-border: rgba(255, 255, 255, 0.119); --control-active: #1F6FEB; --control-active-text: #FFFFFF; --presentation-glow: rgba(31, 111, 235, 0.18); --canvas: #0D1117; --grid: #161B22;"
+>
+  <nav id="viewer-controls" aria-label="Viewer controls">
+    <button
+      id="map-mode-button"
+      type="button"
+      aria-pressed="false"
+    >Map</button>
+    <button
+      id="presentation-mode-button"
+      type="button"
+      aria-pressed="true"
+    >Present</button>
+    <span
+      id="presentation-progress"
+      aria-live="polite"
+      
+    ></span>
+  </nav>
+  <main
+    id="viewport"
+    data-map-width="1452"
+    data-map-height="685"
+    data-grid-step="32"
+    data-theme="github-dark"
+    data-touch-navigation="pan pinch double-tap-fit"
+    style="--canvas: #0D1117; --grid: #161B22;"
+    aria-label="Mind map: Final del Mundial 2026"
+    aria-describedby="viewer-instructions"
+    hidden
+  >
+    <p id="viewer-instructions" class="visually-hidden">
+      Read-only Brainstorm mind map. Nodes with note icons open their note when selected. Drag with a mouse or one finger to pan. Use the mouse wheel or pinch with two fingers to zoom. Double-click, double-tap, or press F to fit; press 0 for 100 percent.
+    </p>
+    <div
+      id="stage"
+      data-map-width="1452"
+      data-map-height="685"
+      role="group"
+      aria-label="Mind map content"
+    >
+      <svg
+        id="branches"
+        class="edges"
+        viewBox="0 0 1452 685"
+        width="1452"
+        height="685"
+        aria-hidden="true"
+      >
+        <path
+          data-edge-from="A1000000-2026-4019-8100-000000000000"
+          data-edge-to="A1000001-2026-4019-8100-000000000001"
+          data-from-x="807"
+          data-from-y="177"
+          data-to-x="887"
+          data-to-y="67"
+          d="M 807 177 C 847 177 847 67 887 67"
+          fill="none"
+          stroke="rgba(241, 191, 0, 0.9)"
+          stroke-width="2"
+          stroke-linecap="round"
+        />
+        <path
+          data-edge-from="A1000000-2026-4019-8100-000000000000"
+          data-edge-to="A1000002-2026-4019-8100-000000000002"
+          data-from-x="807"
+          data-from-y="177"
+          data-to-x="887"
+          data-to-y="121.5"
+          d="M 807 177 C 847 177 847 121.5 887 121.5"
+          fill="none"
+          stroke="rgba(241, 191, 0, 0.9)"
+          stroke-width="2"
+          stroke-linecap="round"
+        />
+        <path
+          data-edge-from="A1000000-2026-4019-8100-000000000000"
+          data-edge-to="A1000003-2026-4019-8100-000000000003"
+          data-from-x="807"
+          data-from-y="177"
+          data-to-x="887"
+          data-to-y="176.5"
+          d="M 807 177 C 847 177 847 176.5 887 176.5"
+          fill="none"
+          stroke="rgba(241, 191, 0, 0.9)"
+          stroke-width="2"
+          stroke-linecap="round"
+        />
+        <path
+          data-edge-from="A1000000-2026-4019-8100-000000000000"
+          data-edge-to="A1000004-2026-4019-8100-000000000004"
+          data-from-x="807"
+          data-from-y="177"
+          data-to-x="887"
+          data-to-y="231.5"
+          d="M 807 177 C 847 177 847 231.5 887 231.5"
+          fill="none"
+          stroke="rgba(241, 191, 0, 0.9)"
+          stroke-width="2"
+          stroke-linecap="round"
+        />
+        <path
+          data-edge-from="A1000000-2026-4019-8100-000000000000"
+          data-edge-to="A1000005-2026-4019-8100-000000000005"
+          data-from-x="807"
+          data-from-y="177"
+          data-to-x="887"
+          data-to-y="286.5"
+          d="M 807 177 C 847 177 847 286.5 887 286.5"
+          fill="none"
+          stroke="rgba(241, 191, 0, 0.9)"
+          stroke-width="2"
+          stroke-linecap="round"
+        />
+        <path
+          data-edge-from="E185ED5B-CC71-4C0C-8BEB-B3BE074629FA"
+          data-edge-to="A1000000-2026-4019-8100-000000000000"
+          data-from-x="365"
+          data-from-y="314.5"
+          data-to-x="445"
+          data-to-y="177"
+          d="M 365 314.5 C 405 314.5 405 177 445 177"
+          fill="none"
+          stroke="rgba(212, 175, 55, 0.9)"
+          stroke-width="2"
+          stroke-linecap="round"
+        />
+        <path
+          data-edge-from="B1000000-2026-4019-8200-000000000000"
+          data-edge-to="B1000001-2026-4019-8200-000000000001"
+          data-from-x="830"
+          data-from-y="451.5"
+          data-to-x="910"
+          data-to-y="341.5"
+          d="M 830 451.5 C 870 451.5 870 341.5 910 341.5"
+          fill="none"
+          stroke="rgba(255, 255, 255, 0.9)"
+          stroke-width="2"
+          stroke-linecap="round"
+        />
+        <path
+          data-edge-from="B1000000-2026-4019-8200-000000000000"
+          data-edge-to="B1000002-2026-4019-8200-000000000002"
+          data-from-x="830"
+          data-from-y="451.5"
+          data-to-x="910"
+          data-to-y="396.5"
+          d="M 830 451.5 C 870 451.5 870 396.5 910 396.5"
+          fill="none"
+          stroke="rgba(255, 255, 255, 0.9)"
+          stroke-width="2"
+          stroke-linecap="round"
+        />
+        <path
+          data-edge-from="B1000000-2026-4019-8200-000000000000"
+          data-edge-to="B1000003-2026-4019-8200-000000000003"
+          data-from-x="830"
+          data-from-y="451.5"
+          data-to-x="910"
+          data-to-y="451.5"
+          d="M 830 451.5 C 870 451.5 870 451.5 910 451.5"
+          fill="none"
+          stroke="rgba(255, 255, 255, 0.9)"
+          stroke-width="2"
+          stroke-linecap="round"
+        />
+        <path
+          data-edge-from="B1000000-2026-4019-8200-000000000000"
+          data-edge-to="B1000004-2026-4019-8200-000000000004"
+          data-from-x="830"
+          data-from-y="451.5"
+          data-to-x="910"
+          data-to-y="506.5"
+          d="M 830 451.5 C 870 451.5 870 506.5 910 506.5"
+          fill="none"
+          stroke="rgba(255, 255, 255, 0.9)"
+          stroke-width="2"
+          stroke-linecap="round"
+        />
+        <path
+          data-edge-from="B1000000-2026-4019-8200-000000000000"
+          data-edge-to="B1000005-2026-4019-8200-000000000005"
+          data-from-x="830"
+          data-from-y="451.5"
+          data-to-x="910"
+          data-to-y="561.5"
+          d="M 830 451.5 C 870 451.5 870 561.5 910 561.5"
+          fill="none"
+          stroke="rgba(255, 255, 255, 0.9)"
+          stroke-width="2"
+          stroke-linecap="round"
+        />
+        <path
+          data-edge-from="E185ED5B-CC71-4C0C-8BEB-B3BE074629FA"
+          data-edge-to="B1000000-2026-4019-8200-000000000000"
+          data-from-x="365"
+          data-from-y="314.5"
+          data-to-x="445"
+          data-to-y="451.5"
+          d="M 365 314.5 C 405 314.5 405 451.5 445 451.5"
+          fill="none"
+          stroke="rgba(212, 175, 55, 0.9)"
+          stroke-width="2"
+          stroke-linecap="round"
+        />
+      </svg>
+      <svg
+        id="node-shapes"
+        viewBox="0 0 1452 685"
+        width="1452"
+        height="685"
+        aria-hidden="true"
+      >
+        <path
+          class="node-shape"
+          data-node-id="E185ED5B-CC71-4C0C-8BEB-B3BE074629FA"
+          data-shape="capsule"
+          d="M 365 314.5 L 365 314.5 C 365 315.56 365 319.27 363.015 324.265 C 360.52 331.12 355.12 336.52 348.265 339.015 C 341.987 341 336.155 341 324.49 341 L 88.51 341 C 76.845 341 71.013 341 64.735 339.015 C 57.88 336.52 52.48 331.12 49.985 324.265 C 48 319.27 48 315.56 48 314.5 L 48 314.5 C 48 313.44 48 309.73 49.985 304.735 C 52.48 297.88 57.88 292.48 64.735 289.985 C 71.013 288 76.845 288 88.51 288 L 324.49 288 C 336.155 288 341.987 288 348.265 289.985 C 355.12 292.48 360.52 297.88 363.015 304.735 C 365 309.73 365 313.44 365 314.5 Z"
+          fill="#F4C430"
+          stroke="#FFFFFF"
+          stroke-width="4"
+          style="filter: drop-shadow(0px 1px 3px rgba(0, 0, 0, 0.45));"
+        />
+        <path
+          class="node-shape"
+          data-node-id="A1000000-2026-4019-8100-000000000000"
+          data-shape="capsule"
+          d="M 807 177 L 807 177 C 807 177.88 807 180.96 805.352 185.107 C 803.281 190.798 798.798 195.281 793.107 197.352 C 787.895 199 783.053 199 773.369 199 L 478.631 199 C 468.947 199 464.105 199 458.893 197.352 C 453.202 195.281 448.719 190.798 446.648 185.107 C 445 180.96 445 177.88 445 177 L 445 177 C 445 176.12 445 173.04 446.648 168.893 C 448.719 163.202 453.202 158.719 458.893 156.648 C 464.105 155 468.947 155 478.631 155 L 773.369 155 C 783.053 155 787.895 155 793.107 156.648 C 798.798 158.719 803.281 163.202 805.352 168.893 C 807 173.04 807 176.12 807 177 Z"
+          fill="#AA151B"
+          stroke="#F1BF00"
+          stroke-width="3"
+          style="filter: drop-shadow(0px 1px 3px rgba(0, 0, 0, 0.45));"
+        />
+        <path
+          class="node-shape"
+          data-node-id="A1000001-2026-4019-8100-000000000001"
+          data-shape="roundedRect"
+          d="M 1333 67 L 1333 67.656 C 1333 72.938 1333 75.579 1332.101 78.422 C 1330.971 81.526 1328.526 83.971 1325.422 85.101 C 1322.579 86 1319.938 86 1314.656 86 L 905.344 86 C 900.062 86 897.421 86 894.578 85.101 C 891.474 83.971 889.029 81.526 887.899 78.422 C 887 75.579 887 72.938 887 67.656 L 887 66.344 C 887 61.062 887 58.421 887.899 55.578 C 889.029 52.474 891.474 50.029 894.578 48.899 C 897.421 48 900.062 48 905.344 48 L 1314.656 48 C 1319.938 48 1322.579 48 1325.422 48.899 C 1328.526 50.029 1330.971 52.474 1332.101 55.578 C 1333 58.421 1333 61.062 1333 66.344 Z"
+          fill="#AA151B"
+          stroke="#F1BF00"
+          stroke-width="2"
+          style="filter: drop-shadow(0px 1px 3px rgba(0, 0, 0, 0.45));"
+        />
+        <path
+          class="node-shape"
+          data-node-id="A1000002-2026-4019-8100-000000000002"
+          data-shape="roundedRect"
+          d="M 1296 121.5 L 1296 122.656 C 1296 127.938 1296 130.579 1295.101 133.422 C 1293.971 136.526 1291.526 138.971 1288.422 140.101 C 1285.579 141 1282.938 141 1277.656 141 L 905.344 141 C 900.062 141 897.421 141 894.578 140.101 C 891.474 138.971 889.029 136.526 887.899 133.422 C 887 130.579 887 127.938 887 122.656 L 887 120.344 C 887 115.062 887 112.421 887.899 109.578 C 889.029 106.474 891.474 104.029 894.578 102.899 C 897.421 102 900.062 102 905.344 102 L 1277.656 102 C 1282.938 102 1285.579 102 1288.422 102.899 C 1291.526 104.029 1293.971 106.474 1295.101 109.578 C 1296 112.421 1296 115.062 1296 120.344 Z"
+          fill="#F1BF00"
+          stroke="#AA151B"
+          stroke-width="2"
+          style="filter: drop-shadow(0px 1px 3px rgba(0, 0, 0, 0.45));"
+        />
+        <path
+          class="node-shape"
+          data-node-id="A1000003-2026-4019-8100-000000000003"
+          data-shape="roundedRect"
+          d="M 1291 176.5 L 1291 177.656 C 1291 182.938 1291 185.579 1290.101 188.422 C 1288.971 191.526 1286.526 193.971 1283.422 195.101 C 1280.579 196 1277.938 196 1272.656 196 L 905.344 196 C 900.062 196 897.421 196 894.578 195.101 C 891.474 193.971 889.029 191.526 887.899 188.422 C 887 185.579 887 182.938 887 177.656 L 887 175.344 C 887 170.062 887 167.421 887.899 164.578 C 889.029 161.474 891.474 159.029 894.578 157.899 C 897.421 157 900.062 157 905.344 157 L 1272.656 157 C 1277.938 157 1280.579 157 1283.422 157.899 C 1286.526 159.029 1288.971 161.474 1290.101 164.578 C 1291 167.421 1291 170.062 1291 175.344 Z"
+          fill="#AA151B"
+          stroke="#F1BF00"
+          stroke-width="2"
+          style="filter: drop-shadow(0px 1px 3px rgba(0, 0, 0, 0.45));"
+        />
+        <path
+          class="node-shape"
+          data-node-id="A1000004-2026-4019-8100-000000000004"
+          data-shape="roundedRect"
+          d="M 1328 231.5 L 1328 232.656 C 1328 237.938 1328 240.579 1327.101 243.422 C 1325.971 246.526 1323.526 248.971 1320.422 250.101 C 1317.579 251 1314.938 251 1309.656 251 L 905.344 251 C 900.062 251 897.421 251 894.578 250.101 C 891.474 248.971 889.029 246.526 887.899 243.422 C 887 240.579 887 237.938 887 232.656 L 887 230.344 C 887 225.062 887 222.421 887.899 219.578 C 889.029 216.474 891.474 214.029 894.578 212.899 C 897.421 212 900.062 212 905.344 212 L 1309.656 212 C 1314.938 212 1317.579 212 1320.422 212.899 C 1323.526 214.029 1325.971 216.474 1327.101 219.578 C 1328 222.421 1328 225.062 1328 230.344 Z"
+          fill="#F1BF00"
+          stroke="#AA151B"
+          stroke-width="2"
+          style="filter: drop-shadow(0px 1px 3px rgba(0, 0, 0, 0.45));"
+        />
+        <path
+          class="node-shape"
+          data-node-id="A1000005-2026-4019-8100-000000000005"
+          data-shape="roundedRect"
+          d="M 1315 286.5 L 1315 287.656 C 1315 292.938 1315 295.579 1314.101 298.422 C 1312.971 301.526 1310.526 303.971 1307.422 305.101 C 1304.579 306 1301.938 306 1296.656 306 L 905.344 306 C 900.062 306 897.421 306 894.578 305.101 C 891.474 303.971 889.029 301.526 887.899 298.422 C 887 295.579 887 292.938 887 287.656 L 887 285.344 C 887 280.062 887 277.421 887.899 274.578 C 889.029 271.474 891.474 269.029 894.578 267.899 C 897.421 267 900.062 267 905.344 267 L 1296.656 267 C 1301.938 267 1304.579 267 1307.422 267.899 C 1310.526 269.029 1312.971 271.474 1314.101 274.578 C 1315 277.421 1315 280.062 1315 285.344 Z"
+          fill="#AA151B"
+          stroke="#F1BF00"
+          stroke-width="2"
+          style="filter: drop-shadow(0px 1px 3px rgba(0, 0, 0, 0.45));"
+        />
+        <path
+          class="node-shape"
+          data-node-id="B1000000-2026-4019-8200-000000000000"
+          data-shape="capsule"
+          d="M 830 451.5 L 830 451.5 C 830 452.4 830 455.55 828.314 459.791 C 826.196 465.611 821.611 470.196 815.791 472.314 C 810.461 474 805.509 474 795.605 474 L 479.395 474 C 469.491 474 464.539 474 459.209 472.314 C 453.389 470.196 448.804 465.611 446.686 459.791 C 445 455.55 445 452.4 445 451.5 L 445 451.5 C 445 450.6 445 447.45 446.686 443.209 C 448.804 437.389 453.389 432.804 459.209 430.686 C 464.539 429 469.491 429 479.395 429 L 795.605 429 C 805.509 429 810.461 429 815.791 430.686 C 821.611 432.804 826.196 437.389 828.314 443.209 C 830 447.45 830 450.6 830 451.5 Z"
+          fill="#74ACDF"
+          stroke="#FCBF49"
+          stroke-width="3"
+          style="filter: drop-shadow(0px 1px 3px rgba(0, 0, 0, 0.45));"
+        />
+        <path
+          class="node-shape"
+          data-node-id="B1000001-2026-4019-8200-000000000001"
+          data-shape="roundedRect"
+          d="M 1319 341.5 L 1319 342.656 C 1319 347.938 1319 350.579 1318.101 353.422 C 1316.971 356.526 1314.526 358.971 1311.422 360.101 C 1308.579 361 1305.938 361 1300.656 361 L 928.344 361 C 923.062 361 920.421 361 917.578 360.101 C 914.474 358.971 912.029 356.526 910.899 353.422 C 910 350.579 910 347.938 910 342.656 L 910 340.344 C 910 335.062 910 332.421 910.899 329.578 C 912.029 326.474 914.474 324.029 917.578 322.899 C 920.421 322 923.062 322 928.344 322 L 1300.656 322 C 1305.938 322 1308.579 322 1311.422 322.899 C 1314.526 324.029 1316.971 326.474 1318.101 329.578 C 1319 332.421 1319 335.062 1319 340.344 Z"
+          fill="#74ACDF"
+          stroke="#FFFFFF"
+          stroke-width="2"
+          style="filter: drop-shadow(0px 1px 3px rgba(0, 0, 0, 0.45));"
+        />
+        <path
+          class="node-shape"
+          data-node-id="B1000002-2026-4019-8200-000000000002"
+          data-shape="roundedRect"
+          d="M 1327 396.5 L 1327 397.656 C 1327 402.938 1327 405.579 1326.101 408.422 C 1324.971 411.526 1322.526 413.971 1319.422 415.101 C 1316.579 416 1313.938 416 1308.656 416 L 928.344 416 C 923.062 416 920.421 416 917.578 415.101 C 914.474 413.971 912.029 411.526 910.899 408.422 C 910 405.579 910 402.938 910 397.656 L 910 395.344 C 910 390.062 910 387.421 910.899 384.578 C 912.029 381.474 914.474 379.029 917.578 377.899 C 920.421 377 923.062 377 928.344 377 L 1308.656 377 C 1313.938 377 1316.579 377 1319.422 377.899 C 1322.526 379.029 1324.971 381.474 1326.101 384.578 C 1327 387.421 1327 390.062 1327 395.344 Z"
+          fill="#FFFFFF"
+          stroke="#74ACDF"
+          stroke-width="2"
+          style="filter: drop-shadow(0px 1px 3px rgba(0, 0, 0, 0.45));"
+        />
+        <path
+          class="node-shape"
+          data-node-id="B1000003-2026-4019-8200-000000000003"
+          data-shape="roundedRect"
+          d="M 1234 451.5 L 1234 452.656 C 1234 457.938 1234 460.579 1233.101 463.422 C 1231.971 466.526 1229.526 468.971 1226.422 470.101 C 1223.579 471 1220.938 471 1215.656 471 L 928.344 471 C 923.062 471 920.421 471 917.578 470.101 C 914.474 468.971 912.029 466.526 910.899 463.422 C 910 460.579 910 457.938 910 452.656 L 910 450.344 C 910 445.062 910 442.421 910.899 439.578 C 912.029 436.474 914.474 434.029 917.578 432.899 C 920.421 432 923.062 432 928.344 432 L 1215.656 432 C 1220.938 432 1223.579 432 1226.422 432.899 C 1229.526 434.029 1231.971 436.474 1233.101 439.578 C 1234 442.421 1234 445.062 1234 450.344 Z"
+          fill="#74ACDF"
+          stroke="#FFFFFF"
+          stroke-width="2"
+          style="filter: drop-shadow(0px 1px 3px rgba(0, 0, 0, 0.45));"
+        />
+        <path
+          class="node-shape"
+          data-node-id="B1000004-2026-4019-8200-000000000004"
+          data-shape="roundedRect"
+          d="M 1348 506.5 L 1348 507.656 C 1348 512.938 1348 515.579 1347.101 518.422 C 1345.971 521.526 1343.526 523.971 1340.422 525.101 C 1337.579 526 1334.938 526 1329.656 526 L 928.344 526 C 923.062 526 920.421 526 917.578 525.101 C 914.474 523.971 912.029 521.526 910.899 518.422 C 910 515.579 910 512.938 910 507.656 L 910 505.344 C 910 500.062 910 497.421 910.899 494.578 C 912.029 491.474 914.474 489.029 917.578 487.899 C 920.421 487 923.062 487 928.344 487 L 1329.656 487 C 1334.938 487 1337.579 487 1340.422 487.899 C 1343.526 489.029 1345.971 491.474 1347.101 494.578 C 1348 497.421 1348 500.062 1348 505.344 Z"
+          fill="#FFFFFF"
+          stroke="#74ACDF"
+          stroke-width="2"
+          style="filter: drop-shadow(0px 1px 3px rgba(0, 0, 0, 0.45));"
+        />
+        <path
+          class="node-shape"
+          data-node-id="B1000005-2026-4019-8200-000000000005"
+          data-shape="roundedRect"
+          d="M 1328 561.5 L 1328 562.656 C 1328 567.938 1328 570.579 1327.101 573.422 C 1325.971 576.526 1323.526 578.971 1320.422 580.101 C 1317.579 581 1314.938 581 1309.656 581 L 928.344 581 C 923.062 581 920.421 581 917.578 580.101 C 914.474 578.971 912.029 576.526 910.899 573.422 C 910 570.579 910 567.938 910 562.656 L 910 560.344 C 910 555.062 910 552.421 910.899 549.578 C 912.029 546.474 914.474 544.029 917.578 542.899 C 920.421 542 923.062 542 928.344 542 L 1309.656 542 C 1314.938 542 1317.579 542 1320.422 542.899 C 1323.526 544.029 1325.971 546.474 1327.101 549.578 C 1328 552.421 1328 555.062 1328 560.344 Z"
+          fill="#74ACDF"
+          stroke="#FCBF49"
+          stroke-width="2"
+          style="filter: drop-shadow(0px 1px 3px rgba(0, 0, 0, 0.45));"
+        />
+      </svg>
+      <section id="nodes" role="list" aria-label="Mind map ideas">
+        <article
+          class="node shape-capsule"
+          role="listitem"
+          data-has-note="false"
+          data-node-id="E185ED5B-CC71-4C0C-8BEB-B3BE074629FA"
+          data-x="48"
+          data-y="288"
+          data-width="317"
+          data-height="53"
+          data-depth="0"
+          data-shape="capsule"
+          data-expanded="true"
+          data-child-count="2"
+          
+          aria-label="Final del Mundial 2026"
+          style="left: 48px; top: 288px; width: 317px; height: 53px; padding: 12px 16px; gap: 6px; --node-fill: #F4C430; --node-text: #0B132B; --node-border: #FFFFFF; --node-border-width: 4px; --node-font-size: 24px; --node-font-weight: 600; --node-font-style: normal; --node-line-height: 29px; --media-size: 22px; --media-font-size: 18px;"
+        >
+          <span
+            class="node-media node-emoji"
+            data-media-kind="emoji"
+            aria-label="Emoji ⚽"
+          >⚽</span>
+          <span class="node-title">
+            <span class="node-line">Final del Mundial 2026</span>
+          </span>
+        </article>
+        <article
+          class="node shape-capsule"
+          role="listitem"
+          data-has-note="false"
+          data-node-id="A1000000-2026-4019-8100-000000000000"
+          data-x="445"
+          data-y="155"
+          data-width="362"
+          data-height="44"
+          data-depth="1"
+          data-shape="capsule"
+          data-expanded="true"
+          data-child-count="5"
+          
+          aria-label="¿Por qué debería ganar España?"
+          style="left: 445px; top: 155px; width: 362px; height: 44px; padding: 10px 16px; gap: 6px; --node-fill: #AA151B; --node-text: #FFFFFF; --node-border: #F1BF00; --node-border-width: 3px; --node-font-size: 20px; --node-font-weight: 600; --node-font-style: normal; --node-line-height: 24px; --media-size: 20px; --media-font-size: 16px;"
+        >
+          <span
+            class="node-media node-emoji"
+            data-media-kind="emoji"
+            aria-label="Emoji 🇪🇸"
+          >🇪🇸</span>
+          <span class="node-title">
+            <span class="node-line">¿Por qué debería ganar España?</span>
+          </span>
+        </article>
+        <article
+          class="node shape-roundedRect"
+          role="listitem"
+          data-has-note="false"
+          data-node-id="A1000001-2026-4019-8100-000000000001"
+          data-x="887"
+          data-y="48"
+          data-width="446"
+          data-height="38"
+          data-depth="2"
+          data-shape="roundedRect"
+          data-expanded="true"
+          data-child-count="0"
+          
+          aria-label="Defensa férrea — 1 gol encajado; nunca por detrás"
+          style="left: 887px; top: 48px; width: 446px; height: 38px; padding: 10px 16px; gap: 6px; --node-fill: #AA151B; --node-text: #FFFFFF; --node-border: #F1BF00; --node-border-width: 2px; --node-font-size: 16px; --node-font-weight: 600; --node-font-style: normal; --node-line-height: 19px; --media-size: 20px; --media-font-size: 16px;"
+        >
+          <span
+            class="node-media node-emoji"
+            data-media-kind="emoji"
+            aria-label="Emoji 🧱"
+          >🧱</span>
+          <span class="node-title">
+            <span class="node-line">Defensa férrea — 1 gol encajado; nunca por detrás</span>
+          </span>
+        </article>
+        <article
+          class="node shape-roundedRect"
+          role="listitem"
+          data-has-note="false"
+          data-node-id="A1000002-2026-4019-8100-000000000002"
+          data-x="887"
+          data-y="102"
+          data-width="409"
+          data-height="39"
+          data-depth="2"
+          data-shape="roundedRect"
+          data-expanded="true"
+          data-child-count="0"
+          
+          aria-label="37 partidos invicta — 28 victorias, 9 empates"
+          style="left: 887px; top: 102px; width: 409px; height: 39px; padding: 10px 16px; gap: 6px; --node-fill: #F1BF00; --node-text: #650B14; --node-border: #AA151B; --node-border-width: 2px; --node-font-size: 16px; --node-font-weight: 600; --node-font-style: normal; --node-line-height: 19px; --media-size: 20px; --media-font-size: 16px;"
+        >
+          <span
+            class="node-media node-emoji"
+            data-media-kind="emoji"
+            aria-label="Emoji 🔥"
+          >🔥</span>
+          <span class="node-title">
+            <span class="node-line">37 partidos invicta — 28 victorias, 9 empates</span>
+          </span>
+        </article>
+        <article
+          class="node shape-roundedRect"
+          role="listitem"
+          data-has-note="false"
+          data-node-id="A1000003-2026-4019-8100-000000000003"
+          data-x="887"
+          data-y="157"
+          data-width="404"
+          data-height="39"
+          data-depth="2"
+          data-shape="roundedRect"
+          data-expanded="true"
+          data-child-count="0"
+          
+          aria-label="Rodri manda con balón — 648 pases al 93 %"
+          style="left: 887px; top: 157px; width: 404px; height: 39px; padding: 10px 16px; gap: 6px; --node-fill: #AA151B; --node-text: #FFFFFF; --node-border: #F1BF00; --node-border-width: 2px; --node-font-size: 16px; --node-font-weight: 600; --node-font-style: normal; --node-line-height: 19px; --media-size: 20px; --media-font-size: 16px;"
+        >
+          <span
+            class="node-media node-emoji"
+            data-media-kind="emoji"
+            aria-label="Emoji 🎯"
+          >🎯</span>
+          <span class="node-title">
+            <span class="node-line">Rodri manda con balón — 648 pases al 93 %</span>
+          </span>
+        </article>
+        <article
+          class="node shape-roundedRect"
+          role="listitem"
+          data-has-note="false"
+          data-node-id="A1000004-2026-4019-8100-000000000004"
+          data-x="887"
+          data-y="212"
+          data-width="441"
+          data-height="39"
+          data-depth="2"
+          data-shape="roundedRect"
+          data-expanded="true"
+          data-child-count="0"
+          
+          aria-label="Plantilla completa — los 26 jugadores disponibles"
+          style="left: 887px; top: 212px; width: 441px; height: 39px; padding: 10px 16px; gap: 6px; --node-fill: #F1BF00; --node-text: #650B14; --node-border: #AA151B; --node-border-width: 2px; --node-font-size: 16px; --node-font-weight: 600; --node-font-style: normal; --node-line-height: 19px; --media-size: 20px; --media-font-size: 16px;"
+        >
+          <span
+            class="node-media node-emoji"
+            data-media-kind="emoji"
+            aria-label="Emoji ✅"
+          >✅</span>
+          <span class="node-title">
+            <span class="node-line">Plantilla completa — los 26 jugadores disponibles</span>
+          </span>
+        </article>
+        <article
+          class="node shape-roundedRect"
+          role="listitem"
+          data-has-note="false"
+          data-node-id="A1000005-2026-4019-8100-000000000005"
+          data-x="887"
+          data-y="267"
+          data-width="428"
+          data-height="39"
+          data-depth="2"
+          data-shape="roundedRect"
+          data-expanded="true"
+          data-child-count="0"
+          
+          aria-label="N.º 1 del mundo — vigente campeona de Europa"
+          style="left: 887px; top: 267px; width: 428px; height: 39px; padding: 10px 16px; gap: 6px; --node-fill: #AA151B; --node-text: #FFFFFF; --node-border: #F1BF00; --node-border-width: 2px; --node-font-size: 16px; --node-font-weight: 600; --node-font-style: normal; --node-line-height: 19px; --media-size: 20px; --media-font-size: 16px;"
+        >
+          <span
+            class="node-media node-emoji"
+            data-media-kind="emoji"
+            aria-label="Emoji 🥇"
+          >🥇</span>
+          <span class="node-title">
+            <span class="node-line">N.º 1 del mundo — vigente campeona de Europa</span>
+          </span>
+        </article>
+        <article
+          class="node shape-capsule"
+          role="listitem"
+          data-has-note="false"
+          data-node-id="B1000000-2026-4019-8200-000000000000"
+          data-x="445"
+          data-y="429"
+          data-width="385"
+          data-height="45"
+          data-depth="1"
+          data-shape="capsule"
+          data-expanded="true"
+          data-child-count="5"
+          
+          aria-label="¿Por qué debería ganar Argentina?"
+          style="left: 445px; top: 429px; width: 385px; height: 45px; padding: 10px 16px; gap: 6px; --node-fill: #74ACDF; --node-text: #0B2E4F; --node-border: #FCBF49; --node-border-width: 3px; --node-font-size: 20px; --node-font-weight: 600; --node-font-style: normal; --node-line-height: 24px; --media-size: 20px; --media-font-size: 16px;"
+        >
+          <span
+            class="node-media node-emoji"
+            data-media-kind="emoji"
+            aria-label="Emoji 🇦🇷"
+          >🇦🇷</span>
+          <span class="node-title">
+            <span class="node-line">¿Por qué debería ganar Argentina?</span>
+          </span>
+        </article>
+        <article
+          class="node shape-roundedRect"
+          role="listitem"
+          data-has-note="false"
+          data-node-id="B1000001-2026-4019-8200-000000000001"
+          data-x="910"
+          data-y="322"
+          data-width="409"
+          data-height="39"
+          data-depth="2"
+          data-shape="roundedRect"
+          data-expanded="true"
+          data-child-count="0"
+          
+          aria-label="Messi sigue decisivo — 8 goles, 4 asistencias"
+          style="left: 910px; top: 322px; width: 409px; height: 39px; padding: 10px 16px; gap: 6px; --node-fill: #74ACDF; --node-text: #0B2E4F; --node-border: #FFFFFF; --node-border-width: 2px; --node-font-size: 16px; --node-font-weight: 600; --node-font-style: normal; --node-line-height: 19px; --media-size: 20px; --media-font-size: 16px;"
+        >
+          <span
+            class="node-media node-emoji"
+            data-media-kind="emoji"
+            aria-label="Emoji 🐐"
+          >🐐</span>
+          <span class="node-title">
+            <span class="node-line">Messi sigue decisivo — 8 goles, 4 asistencias</span>
+          </span>
+        </article>
+        <article
+          class="node shape-roundedRect"
+          role="listitem"
+          data-has-note="false"
+          data-node-id="B1000002-2026-4019-8200-000000000002"
+          data-x="910"
+          data-y="377"
+          data-width="417"
+          data-height="39"
+          data-depth="2"
+          data-shape="roundedRect"
+          data-expanded="true"
+          data-child-count="0"
+          
+          aria-label="Mejor ataque — 19 goles; 15,38 xG, el más alto"
+          style="left: 910px; top: 377px; width: 417px; height: 39px; padding: 10px 16px; gap: 6px; --node-fill: #FFFFFF; --node-text: #2878A8; --node-border: #74ACDF; --node-border-width: 2px; --node-font-size: 16px; --node-font-weight: 600; --node-font-style: normal; --node-line-height: 19px; --media-size: 20px; --media-font-size: 16px;"
+        >
+          <span
+            class="node-media node-emoji"
+            data-media-kind="emoji"
+            aria-label="Emoji 💥"
+          >💥</span>
+          <span class="node-title">
+            <span class="node-line">Mejor ataque — 19 goles; 15,38 xG, el más alto</span>
+          </span>
+        </article>
+        <article
+          class="node shape-roundedRect"
+          role="listitem"
+          data-has-note="false"
+          data-node-id="B1000003-2026-4019-8200-000000000003"
+          data-x="910"
+          data-y="432"
+          data-width="324"
+          data-height="39"
+          data-depth="2"
+          data-shape="roundedRect"
+          data-expanded="true"
+          data-child-count="0"
+          
+          aria-label="Torneo perfecto — 7 victorias de 7"
+          style="left: 910px; top: 432px; width: 324px; height: 39px; padding: 10px 16px; gap: 6px; --node-fill: #74ACDF; --node-text: #0B2E4F; --node-border: #FFFFFF; --node-border-width: 2px; --node-font-size: 16px; --node-font-weight: 600; --node-font-style: normal; --node-line-height: 19px; --media-size: 20px; --media-font-size: 16px;"
+        >
+          <span
+            class="node-media node-emoji"
+            data-media-kind="emoji"
+            aria-label="Emoji 💯"
+          >💯</span>
+          <span class="node-title">
+            <span class="node-line">Torneo perfecto — 7 victorias de 7</span>
+          </span>
+        </article>
+        <article
+          class="node shape-roundedRect"
+          role="listitem"
+          data-has-note="false"
+          data-node-id="B1000004-2026-4019-8200-000000000004"
+          data-x="910"
+          data-y="487"
+          data-width="438"
+          data-height="39"
+          data-depth="2"
+          data-shape="roundedRect"
+          data-expanded="true"
+          data-child-count="0"
+          
+          aria-label="Acero en el medio — Enzo, Mac Allister y Paredes"
+          style="left: 910px; top: 487px; width: 438px; height: 39px; padding: 10px 16px; gap: 6px; --node-fill: #FFFFFF; --node-text: #2878A8; --node-border: #74ACDF; --node-border-width: 2px; --node-font-size: 16px; --node-font-weight: 600; --node-font-style: normal; --node-line-height: 19px; --media-size: 20px; --media-font-size: 16px;"
+        >
+          <span
+            class="node-media node-emoji"
+            data-media-kind="emoji"
+            aria-label="Emoji 🛡️"
+          >🛡️</span>
+          <span class="node-title">
+            <span class="node-line">Acero en el medio — Enzo, Mac Allister y Paredes</span>
+          </span>
+        </article>
+        <article
+          class="node shape-roundedRect"
+          role="listitem"
+          data-has-note="false"
+          data-node-id="B1000005-2026-4019-8200-000000000005"
+          data-x="910"
+          data-y="542"
+          data-width="418"
+          data-height="39"
+          data-depth="2"
+          data-shape="roundedRect"
+          data-expanded="true"
+          data-child-count="0"
+          
+          aria-label="ADN campeón — 3 grandes títulos desde 2021"
+          style="left: 910px; top: 542px; width: 418px; height: 39px; padding: 10px 16px; gap: 6px; --node-fill: #74ACDF; --node-text: #0B2E4F; --node-border: #FCBF49; --node-border-width: 2px; --node-font-size: 16px; --node-font-weight: 600; --node-font-style: normal; --node-line-height: 19px; --media-size: 20px; --media-font-size: 16px;"
+        >
+          <span
+            class="node-media node-emoji"
+            data-media-kind="emoji"
+            aria-label="Emoji 🏆"
+          >🏆</span>
+          <span class="node-title">
+            <span class="node-line">ADN campeón — 3 grandes títulos desde 2021</span>
+          </span>
+        </article>
+      </section>
+      <section id="map-notes" aria-label="Node notes">
+
+      </section>
+    </div>
+  </main>
+  <main
+    id="presentation"
+    aria-label="Brainstorm presentation"
+    
+  >
+    <p class="visually-hidden" id="presentation-instructions">
+      Use Left and Right, Up and Down, Space, Page Up, Page Down, Home, or End to move through every node and note step. Select a nearby node to move directly through the map. Press N to move between the current node and its note. Press Escape to return to the map.
+    </p>
+    <section
+      id="presentation-stage"
+      aria-describedby="presentation-instructions"
+    >
+      <div
+        id="presentation-world"
+        data-map-width="1452"
+        data-map-height="685"
+      >
+        <svg
+          id="presentation-world-branches"
+          viewBox="0 0 1452 685"
+          width="1452"
+          height="685"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <path
+            data-edge-from="A1000000-2026-4019-8100-000000000000"
+            data-edge-to="A1000001-2026-4019-8100-000000000001"
+            data-from-x="807"
+            data-from-y="177"
+            data-to-x="887"
+            data-to-y="67"
+            d="M 807 177 C 847 177 847 67 887 67"
+            fill="none"
+            stroke="rgba(241, 191, 0, 0.9)"
+            stroke-width="2"
+            stroke-linecap="round"
+          />
+          <path
+            data-edge-from="A1000000-2026-4019-8100-000000000000"
+            data-edge-to="A1000002-2026-4019-8100-000000000002"
+            data-from-x="807"
+            data-from-y="177"
+            data-to-x="887"
+            data-to-y="121.5"
+            d="M 807 177 C 847 177 847 121.5 887 121.5"
+            fill="none"
+            stroke="rgba(241, 191, 0, 0.9)"
+            stroke-width="2"
+            stroke-linecap="round"
+          />
+          <path
+            data-edge-from="A1000000-2026-4019-8100-000000000000"
+            data-edge-to="A1000003-2026-4019-8100-000000000003"
+            data-from-x="807"
+            data-from-y="177"
+            data-to-x="887"
+            data-to-y="176.5"
+            d="M 807 177 C 847 177 847 176.5 887 176.5"
+            fill="none"
+            stroke="rgba(241, 191, 0, 0.9)"
+            stroke-width="2"
+            stroke-linecap="round"
+          />
+          <path
+            data-edge-from="A1000000-2026-4019-8100-000000000000"
+            data-edge-to="A1000004-2026-4019-8100-000000000004"
+            data-from-x="807"
+            data-from-y="177"
+            data-to-x="887"
+            data-to-y="231.5"
+            d="M 807 177 C 847 177 847 231.5 887 231.5"
+            fill="none"
+            stroke="rgba(241, 191, 0, 0.9)"
+            stroke-width="2"
+            stroke-linecap="round"
+          />
+          <path
+            data-edge-from="A1000000-2026-4019-8100-000000000000"
+            data-edge-to="A1000005-2026-4019-8100-000000000005"
+            data-from-x="807"
+            data-from-y="177"
+            data-to-x="887"
+            data-to-y="286.5"
+            d="M 807 177 C 847 177 847 286.5 887 286.5"
+            fill="none"
+            stroke="rgba(241, 191, 0, 0.9)"
+            stroke-width="2"
+            stroke-linecap="round"
+          />
+          <path
+            data-edge-from="E185ED5B-CC71-4C0C-8BEB-B3BE074629FA"
+            data-edge-to="A1000000-2026-4019-8100-000000000000"
+            data-from-x="365"
+            data-from-y="314.5"
+            data-to-x="445"
+            data-to-y="177"
+            d="M 365 314.5 C 405 314.5 405 177 445 177"
+            fill="none"
+            stroke="rgba(212, 175, 55, 0.9)"
+            stroke-width="2"
+            stroke-linecap="round"
+          />
+          <path
+            data-edge-from="B1000000-2026-4019-8200-000000000000"
+            data-edge-to="B1000001-2026-4019-8200-000000000001"
+            data-from-x="830"
+            data-from-y="451.5"
+            data-to-x="910"
+            data-to-y="341.5"
+            d="M 830 451.5 C 870 451.5 870 341.5 910 341.5"
+            fill="none"
+            stroke="rgba(255, 255, 255, 0.9)"
+            stroke-width="2"
+            stroke-linecap="round"
+          />
+          <path
+            data-edge-from="B1000000-2026-4019-8200-000000000000"
+            data-edge-to="B1000002-2026-4019-8200-000000000002"
+            data-from-x="830"
+            data-from-y="451.5"
+            data-to-x="910"
+            data-to-y="396.5"
+            d="M 830 451.5 C 870 451.5 870 396.5 910 396.5"
+            fill="none"
+            stroke="rgba(255, 255, 255, 0.9)"
+            stroke-width="2"
+            stroke-linecap="round"
+          />
+          <path
+            data-edge-from="B1000000-2026-4019-8200-000000000000"
+            data-edge-to="B1000003-2026-4019-8200-000000000003"
+            data-from-x="830"
+            data-from-y="451.5"
+            data-to-x="910"
+            data-to-y="451.5"
+            d="M 830 451.5 C 870 451.5 870 451.5 910 451.5"
+            fill="none"
+            stroke="rgba(255, 255, 255, 0.9)"
+            stroke-width="2"
+            stroke-linecap="round"
+          />
+          <path
+            data-edge-from="B1000000-2026-4019-8200-000000000000"
+            data-edge-to="B1000004-2026-4019-8200-000000000004"
+            data-from-x="830"
+            data-from-y="451.5"
+            data-to-x="910"
+            data-to-y="506.5"
+            d="M 830 451.5 C 870 451.5 870 506.5 910 506.5"
+            fill="none"
+            stroke="rgba(255, 255, 255, 0.9)"
+            stroke-width="2"
+            stroke-linecap="round"
+          />
+          <path
+            data-edge-from="B1000000-2026-4019-8200-000000000000"
+            data-edge-to="B1000005-2026-4019-8200-000000000005"
+            data-from-x="830"
+            data-from-y="451.5"
+            data-to-x="910"
+            data-to-y="561.5"
+            d="M 830 451.5 C 870 451.5 870 561.5 910 561.5"
+            fill="none"
+            stroke="rgba(255, 255, 255, 0.9)"
+            stroke-width="2"
+            stroke-linecap="round"
+          />
+          <path
+            data-edge-from="E185ED5B-CC71-4C0C-8BEB-B3BE074629FA"
+            data-edge-to="B1000000-2026-4019-8200-000000000000"
+            data-from-x="365"
+            data-from-y="314.5"
+            data-to-x="445"
+            data-to-y="451.5"
+            d="M 365 314.5 C 405 314.5 405 451.5 445 451.5"
+            fill="none"
+            stroke="rgba(212, 175, 55, 0.9)"
+            stroke-width="2"
+            stroke-linecap="round"
+          />
+        </svg>
+        <section
+          class="presentation-slide"
+          data-node-id="E185ED5B-CC71-4C0C-8BEB-B3BE074629FA"
+          data-parent-id=""
+          data-sibling-index="0"
+          data-slide-title="Final del Mundial 2026"
+          data-depth="0"
+          data-map-x="206.5"
+          data-map-y="314.5"
+          data-map-width="317"
+          data-map-height="53"
+          data-base-font-size="24"
+          data-base-line-height="29"
+          data-base-padding-y="12"
+          data-base-gap="6"
+          data-base-media-size="22"
+          data-has-note="false"
+          data-face="node"
+          data-previous-relation-kind="none"
+          data-previous-relation-label=""
+          data-previous-route=""
+          data-next-relation-kind="child"
+          data-next-relation-label="Child"
+          data-next-route="206.5,314.5;626,177"
+          data-position="current"
+          aria-label="Slide 1 of 13, Final del Mundial 2026"
+          aria-hidden="false"
+          style="left: 48px; top: 288px; width: 317px; height: 53px; --slide-fill: #F4C430; --slide-text: #0B132B; --slide-border: #FFFFFF; --slide-border-width: 4px; --slide-font-size: 24px; --slide-font-weight: 600; --slide-font-style: normal; --slide-line-height: 29px; --node-padding-y: 12px; --node-gap: 6px; --presentation-media-size: 22px;"
+        >
+          <div class="presentation-flip">
+            <article
+              class="presentation-node-front shape-capsule"
+              aria-hidden="false"
+            >
+              <svg
+                class="presentation-node-shape"
+                viewBox="0 0 317 53"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path
+                  d="M 317 26.5 L 317 26.5 C 317 27.56 317 31.27 315.015 36.265 C 312.52 43.12 307.12 48.52 300.265 51.015 C 293.987 53 288.155 53 276.49 53 L 40.51 53 C 28.845 53 23.013 53 16.735 51.015 C 9.88 48.52 4.48 43.12 1.985 36.265 C 0 31.27 0 27.56 0 26.5 L 0 26.5 C 0 25.44 0 21.73 1.985 16.735 C 4.48 9.88 9.88 4.48 16.735 1.985 C 23.013 0 28.845 0 40.51 0 L 276.49 0 C 288.155 0 293.987 0 300.265 1.985 C 307.12 4.48 312.52 9.88 315.015 16.735 C 317 21.73 317 25.44 317 26.5 Z"
+                  fill="#F4C430"
+                  stroke="#FFFFFF"
+                  stroke-width="4"
+                ></path>
+                <path
+                  class="presentation-node-selection"
+                  d="M 317 26.5 L 317 26.5 C 317 27.56 317 31.27 315.015 36.265 C 312.52 43.12 307.12 48.52 300.265 51.015 C 293.987 53 288.155 53 276.49 53 L 40.51 53 C 28.845 53 23.013 53 16.735 51.015 C 9.88 48.52 4.48 43.12 1.985 36.265 C 0 31.27 0 27.56 0 26.5 L 0 26.5 C 0 25.44 0 21.73 1.985 16.735 C 4.48 9.88 9.88 4.48 16.735 1.985 C 23.013 0 28.845 0 40.51 0 L 276.49 0 C 288.155 0 293.987 0 300.265 1.985 C 307.12 4.48 312.52 9.88 315.015 16.735 C 317 21.73 317 25.44 317 26.5 Z"
+                  fill="none"
+                  stroke="#F7821B"
+                  stroke-width="2.5"
+                ></path>
+              </svg>
+              <span class="presentation-media" aria-label="Emoji ⚽">⚽</span>
+              <span class="presentation-node-title">
+                <h1>
+                  <span class="presentation-node-line">Final del Mundial 2026</span>
+                </h1>
+              </span>
+        
+            </article>
+        
+          </div>
+        </section>
+        <section
+          class="presentation-slide"
+          data-node-id="A1000000-2026-4019-8100-000000000000"
+          data-parent-id="E185ED5B-CC71-4C0C-8BEB-B3BE074629FA"
+          data-sibling-index="0"
+          data-slide-title="¿Por qué debería ganar España?"
+          data-depth="1"
+          data-map-x="626"
+          data-map-y="177"
+          data-map-width="362"
+          data-map-height="44"
+          data-base-font-size="20"
+          data-base-line-height="24"
+          data-base-padding-y="10"
+          data-base-gap="6"
+          data-base-media-size="20"
+          data-has-note="false"
+          data-face="node"
+          data-previous-relation-kind="parent"
+          data-previous-relation-label="Parent"
+          data-previous-route="626,177;206.5,314.5"
+          data-next-relation-kind="child"
+          data-next-relation-label="Child"
+          data-next-route="626,177;1110,67"
+          data-position="next"
+          aria-label="Slide 2 of 13, ¿Por qué debería ganar España?"
+          aria-hidden="false"
+          style="left: 445px; top: 155px; width: 362px; height: 44px; --slide-fill: #AA151B; --slide-text: #FFFFFF; --slide-border: #F1BF00; --slide-border-width: 3px; --slide-font-size: 20px; --slide-font-weight: 600; --slide-font-style: normal; --slide-line-height: 24px; --node-padding-y: 10px; --node-gap: 6px; --presentation-media-size: 20px;"
+        >
+          <div class="presentation-flip">
+            <article
+              class="presentation-node-front shape-capsule"
+              aria-hidden="false"
+            >
+              <svg
+                class="presentation-node-shape"
+                viewBox="0 0 362 44"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path
+                  d="M 362 22 L 362 22 C 362 22.88 362 25.96 360.352 30.107 C 358.281 35.798 353.798 40.281 348.107 42.352 C 342.895 44 338.053 44 328.369 44 L 33.631 44 C 23.947 44 19.105 44 13.893 42.352 C 8.202 40.281 3.719 35.798 1.648 30.107 C 0 25.96 0 22.88 0 22 L 0 22 C 0 21.12 0 18.04 1.648 13.893 C 3.719 8.202 8.202 3.719 13.893 1.648 C 19.105 0 23.947 0 33.631 0 L 328.369 0 C 338.053 0 342.895 0 348.107 1.648 C 353.798 3.719 358.281 8.202 360.352 13.893 C 362 18.04 362 21.12 362 22 Z"
+                  fill="#AA151B"
+                  stroke="#F1BF00"
+                  stroke-width="3"
+                ></path>
+                <path
+                  class="presentation-node-selection"
+                  d="M 362 22 L 362 22 C 362 22.88 362 25.96 360.352 30.107 C 358.281 35.798 353.798 40.281 348.107 42.352 C 342.895 44 338.053 44 328.369 44 L 33.631 44 C 23.947 44 19.105 44 13.893 42.352 C 8.202 40.281 3.719 35.798 1.648 30.107 C 0 25.96 0 22.88 0 22 L 0 22 C 0 21.12 0 18.04 1.648 13.893 C 3.719 8.202 8.202 3.719 13.893 1.648 C 19.105 0 23.947 0 33.631 0 L 328.369 0 C 338.053 0 342.895 0 348.107 1.648 C 353.798 3.719 358.281 8.202 360.352 13.893 C 362 18.04 362 21.12 362 22 Z"
+                  fill="none"
+                  stroke="#F7821B"
+                  stroke-width="2.5"
+                ></path>
+              </svg>
+              <span class="presentation-media" aria-label="Emoji 🇪🇸">🇪🇸</span>
+              <span class="presentation-node-title">
+                <h1>
+                  <span class="presentation-node-line">¿Por qué debería ganar España?</span>
+                </h1>
+              </span>
+        
+            </article>
+        
+          </div>
+        </section>
+        <section
+          class="presentation-slide"
+          data-node-id="A1000001-2026-4019-8100-000000000001"
+          data-parent-id="A1000000-2026-4019-8100-000000000000"
+          data-sibling-index="0"
+          data-slide-title="Defensa férrea — 1 gol encajado; nunca por detrás"
+          data-depth="2"
+          data-map-x="1110"
+          data-map-y="67"
+          data-map-width="446"
+          data-map-height="38"
+          data-base-font-size="16"
+          data-base-line-height="19"
+          data-base-padding-y="10"
+          data-base-gap="6"
+          data-base-media-size="20"
+          data-has-note="false"
+          data-face="node"
+          data-previous-relation-kind="parent"
+          data-previous-relation-label="Parent"
+          data-previous-route="1110,67;626,177"
+          data-next-relation-kind="sibling"
+          data-next-relation-label="Next sibling · via ¿Por qué debería ganar España?"
+          data-next-route="1110,67;626,177;1091.5,121.5"
+          data-position="context"
+          aria-label="Slide 3 of 13, Defensa férrea — 1 gol encajado; nunca por detrás"
+          aria-hidden="false"
+          style="left: 887px; top: 48px; width: 446px; height: 38px; --slide-fill: #AA151B; --slide-text: #FFFFFF; --slide-border: #F1BF00; --slide-border-width: 2px; --slide-font-size: 16px; --slide-font-weight: 600; --slide-font-style: normal; --slide-line-height: 19px; --node-padding-y: 10px; --node-gap: 6px; --presentation-media-size: 20px;"
+        >
+          <div class="presentation-flip">
+            <article
+              class="presentation-node-front shape-roundedRect"
+              aria-hidden="false"
+            >
+              <svg
+                class="presentation-node-shape"
+                viewBox="0 0 446 38"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path
+                  d="M 446 19 L 446 19.656 C 446 24.938 446 27.579 445.101 30.422 C 443.971 33.526 441.526 35.971 438.422 37.101 C 435.579 38 432.938 38 427.656 38 L 18.344 38 C 13.062 38 10.421 38 7.578 37.101 C 4.474 35.971 2.029 33.526 0.899 30.422 C 0 27.579 0 24.938 0 19.656 L 0 18.344 C 0 13.062 0 10.421 0.899 7.578 C 2.029 4.474 4.474 2.029 7.578 0.899 C 10.421 0 13.062 0 18.344 0 L 427.656 0 C 432.938 0 435.579 0 438.422 0.899 C 441.526 2.029 443.971 4.474 445.101 7.578 C 446 10.421 446 13.062 446 18.344 Z"
+                  fill="#AA151B"
+                  stroke="#F1BF00"
+                  stroke-width="2"
+                ></path>
+                <path
+                  class="presentation-node-selection"
+                  d="M 446 19 L 446 19.656 C 446 24.938 446 27.579 445.101 30.422 C 443.971 33.526 441.526 35.971 438.422 37.101 C 435.579 38 432.938 38 427.656 38 L 18.344 38 C 13.062 38 10.421 38 7.578 37.101 C 4.474 35.971 2.029 33.526 0.899 30.422 C 0 27.579 0 24.938 0 19.656 L 0 18.344 C 0 13.062 0 10.421 0.899 7.578 C 2.029 4.474 4.474 2.029 7.578 0.899 C 10.421 0 13.062 0 18.344 0 L 427.656 0 C 432.938 0 435.579 0 438.422 0.899 C 441.526 2.029 443.971 4.474 445.101 7.578 C 446 10.421 446 13.062 446 18.344 Z"
+                  fill="none"
+                  stroke="#F7821B"
+                  stroke-width="2.5"
+                ></path>
+              </svg>
+              <span class="presentation-media" aria-label="Emoji 🧱">🧱</span>
+              <span class="presentation-node-title">
+                <h1>
+                  <span class="presentation-node-line">Defensa férrea — 1 gol encajado; nunca por detrás</span>
+                </h1>
+              </span>
+        
+            </article>
+        
+          </div>
+        </section>
+        <section
+          class="presentation-slide"
+          data-node-id="A1000002-2026-4019-8100-000000000002"
+          data-parent-id="A1000000-2026-4019-8100-000000000000"
+          data-sibling-index="1"
+          data-slide-title="37 partidos invicta — 28 victorias, 9 empates"
+          data-depth="2"
+          data-map-x="1091.5"
+          data-map-y="121.5"
+          data-map-width="409"
+          data-map-height="39"
+          data-base-font-size="16"
+          data-base-line-height="19"
+          data-base-padding-y="10"
+          data-base-gap="6"
+          data-base-media-size="20"
+          data-has-note="false"
+          data-face="node"
+          data-previous-relation-kind="sibling"
+          data-previous-relation-label="Previous sibling · via ¿Por qué debería ganar España?"
+          data-previous-route="1091.5,121.5;626,177;1110,67"
+          data-next-relation-kind="sibling"
+          data-next-relation-label="Next sibling · via ¿Por qué debería ganar España?"
+          data-next-route="1091.5,121.5;626,177;1089,176.5"
+          data-position="context"
+          aria-label="Slide 4 of 13, 37 partidos invicta — 28 victorias, 9 empates"
+          aria-hidden="false"
+          style="left: 887px; top: 102px; width: 409px; height: 39px; --slide-fill: #F1BF00; --slide-text: #650B14; --slide-border: #AA151B; --slide-border-width: 2px; --slide-font-size: 16px; --slide-font-weight: 600; --slide-font-style: normal; --slide-line-height: 19px; --node-padding-y: 10px; --node-gap: 6px; --presentation-media-size: 20px;"
+        >
+          <div class="presentation-flip">
+            <article
+              class="presentation-node-front shape-roundedRect"
+              aria-hidden="false"
+            >
+              <svg
+                class="presentation-node-shape"
+                viewBox="0 0 409 39"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path
+                  d="M 409 19.5 L 409 20.656 C 409 25.938 409 28.579 408.101 31.422 C 406.971 34.526 404.526 36.971 401.422 38.101 C 398.579 39 395.938 39 390.656 39 L 18.344 39 C 13.062 39 10.421 39 7.578 38.101 C 4.474 36.971 2.029 34.526 0.899 31.422 C 0 28.579 0 25.938 0 20.656 L 0 18.344 C 0 13.062 0 10.421 0.899 7.578 C 2.029 4.474 4.474 2.029 7.578 0.899 C 10.421 0 13.062 0 18.344 0 L 390.656 0 C 395.938 0 398.579 0 401.422 0.899 C 404.526 2.029 406.971 4.474 408.101 7.578 C 409 10.421 409 13.062 409 18.344 Z"
+                  fill="#F1BF00"
+                  stroke="#AA151B"
+                  stroke-width="2"
+                ></path>
+                <path
+                  class="presentation-node-selection"
+                  d="M 409 19.5 L 409 20.656 C 409 25.938 409 28.579 408.101 31.422 C 406.971 34.526 404.526 36.971 401.422 38.101 C 398.579 39 395.938 39 390.656 39 L 18.344 39 C 13.062 39 10.421 39 7.578 38.101 C 4.474 36.971 2.029 34.526 0.899 31.422 C 0 28.579 0 25.938 0 20.656 L 0 18.344 C 0 13.062 0 10.421 0.899 7.578 C 2.029 4.474 4.474 2.029 7.578 0.899 C 10.421 0 13.062 0 18.344 0 L 390.656 0 C 395.938 0 398.579 0 401.422 0.899 C 404.526 2.029 406.971 4.474 408.101 7.578 C 409 10.421 409 13.062 409 18.344 Z"
+                  fill="none"
+                  stroke="#F7821B"
+                  stroke-width="2.5"
+                ></path>
+              </svg>
+              <span class="presentation-media" aria-label="Emoji 🔥">🔥</span>
+              <span class="presentation-node-title">
+                <h1>
+                  <span class="presentation-node-line">37 partidos invicta — 28 victorias, 9 empates</span>
+                </h1>
+              </span>
+        
+            </article>
+        
+          </div>
+        </section>
+        <section
+          class="presentation-slide"
+          data-node-id="A1000003-2026-4019-8100-000000000003"
+          data-parent-id="A1000000-2026-4019-8100-000000000000"
+          data-sibling-index="2"
+          data-slide-title="Rodri manda con balón — 648 pases al 93 %"
+          data-depth="2"
+          data-map-x="1089"
+          data-map-y="176.5"
+          data-map-width="404"
+          data-map-height="39"
+          data-base-font-size="16"
+          data-base-line-height="19"
+          data-base-padding-y="10"
+          data-base-gap="6"
+          data-base-media-size="20"
+          data-has-note="false"
+          data-face="node"
+          data-previous-relation-kind="sibling"
+          data-previous-relation-label="Previous sibling · via ¿Por qué debería ganar España?"
+          data-previous-route="1089,176.5;626,177;1091.5,121.5"
+          data-next-relation-kind="sibling"
+          data-next-relation-label="Next sibling · via ¿Por qué debería ganar España?"
+          data-next-route="1089,176.5;626,177;1107.5,231.5"
+          data-position="context"
+          aria-label="Slide 5 of 13, Rodri manda con balón — 648 pases al 93 %"
+          aria-hidden="false"
+          style="left: 887px; top: 157px; width: 404px; height: 39px; --slide-fill: #AA151B; --slide-text: #FFFFFF; --slide-border: #F1BF00; --slide-border-width: 2px; --slide-font-size: 16px; --slide-font-weight: 600; --slide-font-style: normal; --slide-line-height: 19px; --node-padding-y: 10px; --node-gap: 6px; --presentation-media-size: 20px;"
+        >
+          <div class="presentation-flip">
+            <article
+              class="presentation-node-front shape-roundedRect"
+              aria-hidden="false"
+            >
+              <svg
+                class="presentation-node-shape"
+                viewBox="0 0 404 39"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path
+                  d="M 404 19.5 L 404 20.656 C 404 25.938 404 28.579 403.101 31.422 C 401.971 34.526 399.526 36.971 396.422 38.101 C 393.579 39 390.938 39 385.656 39 L 18.344 39 C 13.062 39 10.421 39 7.578 38.101 C 4.474 36.971 2.029 34.526 0.899 31.422 C 0 28.579 0 25.938 0 20.656 L 0 18.344 C 0 13.062 0 10.421 0.899 7.578 C 2.029 4.474 4.474 2.029 7.578 0.899 C 10.421 0 13.062 0 18.344 0 L 385.656 0 C 390.938 0 393.579 0 396.422 0.899 C 399.526 2.029 401.971 4.474 403.101 7.578 C 404 10.421 404 13.062 404 18.344 Z"
+                  fill="#AA151B"
+                  stroke="#F1BF00"
+                  stroke-width="2"
+                ></path>
+                <path
+                  class="presentation-node-selection"
+                  d="M 404 19.5 L 404 20.656 C 404 25.938 404 28.579 403.101 31.422 C 401.971 34.526 399.526 36.971 396.422 38.101 C 393.579 39 390.938 39 385.656 39 L 18.344 39 C 13.062 39 10.421 39 7.578 38.101 C 4.474 36.971 2.029 34.526 0.899 31.422 C 0 28.579 0 25.938 0 20.656 L 0 18.344 C 0 13.062 0 10.421 0.899 7.578 C 2.029 4.474 4.474 2.029 7.578 0.899 C 10.421 0 13.062 0 18.344 0 L 385.656 0 C 390.938 0 393.579 0 396.422 0.899 C 399.526 2.029 401.971 4.474 403.101 7.578 C 404 10.421 404 13.062 404 18.344 Z"
+                  fill="none"
+                  stroke="#F7821B"
+                  stroke-width="2.5"
+                ></path>
+              </svg>
+              <span class="presentation-media" aria-label="Emoji 🎯">🎯</span>
+              <span class="presentation-node-title">
+                <h1>
+                  <span class="presentation-node-line">Rodri manda con balón — 648 pases al 93 %</span>
+                </h1>
+              </span>
+        
+            </article>
+        
+          </div>
+        </section>
+        <section
+          class="presentation-slide"
+          data-node-id="A1000004-2026-4019-8100-000000000004"
+          data-parent-id="A1000000-2026-4019-8100-000000000000"
+          data-sibling-index="3"
+          data-slide-title="Plantilla completa — los 26 jugadores disponibles"
+          data-depth="2"
+          data-map-x="1107.5"
+          data-map-y="231.5"
+          data-map-width="441"
+          data-map-height="39"
+          data-base-font-size="16"
+          data-base-line-height="19"
+          data-base-padding-y="10"
+          data-base-gap="6"
+          data-base-media-size="20"
+          data-has-note="false"
+          data-face="node"
+          data-previous-relation-kind="sibling"
+          data-previous-relation-label="Previous sibling · via ¿Por qué debería ganar España?"
+          data-previous-route="1107.5,231.5;626,177;1089,176.5"
+          data-next-relation-kind="sibling"
+          data-next-relation-label="Next sibling · via ¿Por qué debería ganar España?"
+          data-next-route="1107.5,231.5;626,177;1101,286.5"
+          data-position="context"
+          aria-label="Slide 6 of 13, Plantilla completa — los 26 jugadores disponibles"
+          aria-hidden="false"
+          style="left: 887px; top: 212px; width: 441px; height: 39px; --slide-fill: #F1BF00; --slide-text: #650B14; --slide-border: #AA151B; --slide-border-width: 2px; --slide-font-size: 16px; --slide-font-weight: 600; --slide-font-style: normal; --slide-line-height: 19px; --node-padding-y: 10px; --node-gap: 6px; --presentation-media-size: 20px;"
+        >
+          <div class="presentation-flip">
+            <article
+              class="presentation-node-front shape-roundedRect"
+              aria-hidden="false"
+            >
+              <svg
+                class="presentation-node-shape"
+                viewBox="0 0 441 39"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path
+                  d="M 441 19.5 L 441 20.656 C 441 25.938 441 28.579 440.101 31.422 C 438.971 34.526 436.526 36.971 433.422 38.101 C 430.579 39 427.938 39 422.656 39 L 18.344 39 C 13.062 39 10.421 39 7.578 38.101 C 4.474 36.971 2.029 34.526 0.899 31.422 C 0 28.579 0 25.938 0 20.656 L 0 18.344 C 0 13.062 0 10.421 0.899 7.578 C 2.029 4.474 4.474 2.029 7.578 0.899 C 10.421 0 13.062 0 18.344 0 L 422.656 0 C 427.938 0 430.579 0 433.422 0.899 C 436.526 2.029 438.971 4.474 440.101 7.578 C 441 10.421 441 13.062 441 18.344 Z"
+                  fill="#F1BF00"
+                  stroke="#AA151B"
+                  stroke-width="2"
+                ></path>
+                <path
+                  class="presentation-node-selection"
+                  d="M 441 19.5 L 441 20.656 C 441 25.938 441 28.579 440.101 31.422 C 438.971 34.526 436.526 36.971 433.422 38.101 C 430.579 39 427.938 39 422.656 39 L 18.344 39 C 13.062 39 10.421 39 7.578 38.101 C 4.474 36.971 2.029 34.526 0.899 31.422 C 0 28.579 0 25.938 0 20.656 L 0 18.344 C 0 13.062 0 10.421 0.899 7.578 C 2.029 4.474 4.474 2.029 7.578 0.899 C 10.421 0 13.062 0 18.344 0 L 422.656 0 C 427.938 0 430.579 0 433.422 0.899 C 436.526 2.029 438.971 4.474 440.101 7.578 C 441 10.421 441 13.062 441 18.344 Z"
+                  fill="none"
+                  stroke="#F7821B"
+                  stroke-width="2.5"
+                ></path>
+              </svg>
+              <span class="presentation-media" aria-label="Emoji ✅">✅</span>
+              <span class="presentation-node-title">
+                <h1>
+                  <span class="presentation-node-line">Plantilla completa — los 26 jugadores disponibles</span>
+                </h1>
+              </span>
+        
+            </article>
+        
+          </div>
+        </section>
+        <section
+          class="presentation-slide"
+          data-node-id="A1000005-2026-4019-8100-000000000005"
+          data-parent-id="A1000000-2026-4019-8100-000000000000"
+          data-sibling-index="4"
+          data-slide-title="N.º 1 del mundo — vigente campeona de Europa"
+          data-depth="2"
+          data-map-x="1101"
+          data-map-y="286.5"
+          data-map-width="428"
+          data-map-height="39"
+          data-base-font-size="16"
+          data-base-line-height="19"
+          data-base-padding-y="10"
+          data-base-gap="6"
+          data-base-media-size="20"
+          data-has-note="false"
+          data-face="node"
+          data-previous-relation-kind="sibling"
+          data-previous-relation-label="Previous sibling · via ¿Por qué debería ganar España?"
+          data-previous-route="1101,286.5;626,177;1107.5,231.5"
+          data-next-relation-kind="branch"
+          data-next-relation-label="Next branch · via Final del Mundial 2026"
+          data-next-route="1101,286.5;626,177;206.5,314.5;637.5,451.5"
+          data-position="context"
+          aria-label="Slide 7 of 13, N.º 1 del mundo — vigente campeona de Europa"
+          aria-hidden="false"
+          style="left: 887px; top: 267px; width: 428px; height: 39px; --slide-fill: #AA151B; --slide-text: #FFFFFF; --slide-border: #F1BF00; --slide-border-width: 2px; --slide-font-size: 16px; --slide-font-weight: 600; --slide-font-style: normal; --slide-line-height: 19px; --node-padding-y: 10px; --node-gap: 6px; --presentation-media-size: 20px;"
+        >
+          <div class="presentation-flip">
+            <article
+              class="presentation-node-front shape-roundedRect"
+              aria-hidden="false"
+            >
+              <svg
+                class="presentation-node-shape"
+                viewBox="0 0 428 39"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path
+                  d="M 428 19.5 L 428 20.656 C 428 25.938 428 28.579 427.101 31.422 C 425.971 34.526 423.526 36.971 420.422 38.101 C 417.579 39 414.938 39 409.656 39 L 18.344 39 C 13.062 39 10.421 39 7.578 38.101 C 4.474 36.971 2.029 34.526 0.899 31.422 C 0 28.579 0 25.938 0 20.656 L 0 18.344 C 0 13.062 0 10.421 0.899 7.578 C 2.029 4.474 4.474 2.029 7.578 0.899 C 10.421 0 13.062 0 18.344 0 L 409.656 0 C 414.938 0 417.579 0 420.422 0.899 C 423.526 2.029 425.971 4.474 427.101 7.578 C 428 10.421 428 13.062 428 18.344 Z"
+                  fill="#AA151B"
+                  stroke="#F1BF00"
+                  stroke-width="2"
+                ></path>
+                <path
+                  class="presentation-node-selection"
+                  d="M 428 19.5 L 428 20.656 C 428 25.938 428 28.579 427.101 31.422 C 425.971 34.526 423.526 36.971 420.422 38.101 C 417.579 39 414.938 39 409.656 39 L 18.344 39 C 13.062 39 10.421 39 7.578 38.101 C 4.474 36.971 2.029 34.526 0.899 31.422 C 0 28.579 0 25.938 0 20.656 L 0 18.344 C 0 13.062 0 10.421 0.899 7.578 C 2.029 4.474 4.474 2.029 7.578 0.899 C 10.421 0 13.062 0 18.344 0 L 409.656 0 C 414.938 0 417.579 0 420.422 0.899 C 423.526 2.029 425.971 4.474 427.101 7.578 C 428 10.421 428 13.062 428 18.344 Z"
+                  fill="none"
+                  stroke="#F7821B"
+                  stroke-width="2.5"
+                ></path>
+              </svg>
+              <span class="presentation-media" aria-label="Emoji 🥇">🥇</span>
+              <span class="presentation-node-title">
+                <h1>
+                  <span class="presentation-node-line">N.º 1 del mundo — vigente campeona de Europa</span>
+                </h1>
+              </span>
+        
+            </article>
+        
+          </div>
+        </section>
+        <section
+          class="presentation-slide"
+          data-node-id="B1000000-2026-4019-8200-000000000000"
+          data-parent-id="E185ED5B-CC71-4C0C-8BEB-B3BE074629FA"
+          data-sibling-index="1"
+          data-slide-title="¿Por qué debería ganar Argentina?"
+          data-depth="1"
+          data-map-x="637.5"
+          data-map-y="451.5"
+          data-map-width="385"
+          data-map-height="45"
+          data-base-font-size="20"
+          data-base-line-height="24"
+          data-base-padding-y="10"
+          data-base-gap="6"
+          data-base-media-size="20"
+          data-has-note="false"
+          data-face="node"
+          data-previous-relation-kind="branch"
+          data-previous-relation-label="Previous branch · via Final del Mundial 2026"
+          data-previous-route="637.5,451.5;206.5,314.5;626,177;1101,286.5"
+          data-next-relation-kind="child"
+          data-next-relation-label="Child"
+          data-next-route="637.5,451.5;1114.5,341.5"
+          data-position="context"
+          aria-label="Slide 8 of 13, ¿Por qué debería ganar Argentina?"
+          aria-hidden="false"
+          style="left: 445px; top: 429px; width: 385px; height: 45px; --slide-fill: #74ACDF; --slide-text: #0B2E4F; --slide-border: #FCBF49; --slide-border-width: 3px; --slide-font-size: 20px; --slide-font-weight: 600; --slide-font-style: normal; --slide-line-height: 24px; --node-padding-y: 10px; --node-gap: 6px; --presentation-media-size: 20px;"
+        >
+          <div class="presentation-flip">
+            <article
+              class="presentation-node-front shape-capsule"
+              aria-hidden="false"
+            >
+              <svg
+                class="presentation-node-shape"
+                viewBox="0 0 385 45"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path
+                  d="M 385 22.5 L 385 22.5 C 385 23.4 385 26.55 383.314 30.791 C 381.196 36.611 376.611 41.196 370.791 43.314 C 365.461 45 360.509 45 350.605 45 L 34.395 45 C 24.491 45 19.539 45 14.209 43.314 C 8.389 41.196 3.804 36.611 1.686 30.791 C 0 26.55 0 23.4 0 22.5 L 0 22.5 C 0 21.6 0 18.45 1.686 14.209 C 3.804 8.389 8.389 3.804 14.209 1.686 C 19.539 0 24.491 0 34.395 0 L 350.605 0 C 360.509 0 365.461 0 370.791 1.686 C 376.611 3.804 381.196 8.389 383.314 14.209 C 385 18.45 385 21.6 385 22.5 Z"
+                  fill="#74ACDF"
+                  stroke="#FCBF49"
+                  stroke-width="3"
+                ></path>
+                <path
+                  class="presentation-node-selection"
+                  d="M 385 22.5 L 385 22.5 C 385 23.4 385 26.55 383.314 30.791 C 381.196 36.611 376.611 41.196 370.791 43.314 C 365.461 45 360.509 45 350.605 45 L 34.395 45 C 24.491 45 19.539 45 14.209 43.314 C 8.389 41.196 3.804 36.611 1.686 30.791 C 0 26.55 0 23.4 0 22.5 L 0 22.5 C 0 21.6 0 18.45 1.686 14.209 C 3.804 8.389 8.389 3.804 14.209 1.686 C 19.539 0 24.491 0 34.395 0 L 350.605 0 C 360.509 0 365.461 0 370.791 1.686 C 376.611 3.804 381.196 8.389 383.314 14.209 C 385 18.45 385 21.6 385 22.5 Z"
+                  fill="none"
+                  stroke="#F7821B"
+                  stroke-width="2.5"
+                ></path>
+              </svg>
+              <span class="presentation-media" aria-label="Emoji 🇦🇷">🇦🇷</span>
+              <span class="presentation-node-title">
+                <h1>
+                  <span class="presentation-node-line">¿Por qué debería ganar Argentina?</span>
+                </h1>
+              </span>
+        
+            </article>
+        
+          </div>
+        </section>
+        <section
+          class="presentation-slide"
+          data-node-id="B1000001-2026-4019-8200-000000000001"
+          data-parent-id="B1000000-2026-4019-8200-000000000000"
+          data-sibling-index="0"
+          data-slide-title="Messi sigue decisivo — 8 goles, 4 asistencias"
+          data-depth="2"
+          data-map-x="1114.5"
+          data-map-y="341.5"
+          data-map-width="409"
+          data-map-height="39"
+          data-base-font-size="16"
+          data-base-line-height="19"
+          data-base-padding-y="10"
+          data-base-gap="6"
+          data-base-media-size="20"
+          data-has-note="false"
+          data-face="node"
+          data-previous-relation-kind="parent"
+          data-previous-relation-label="Parent"
+          data-previous-route="1114.5,341.5;637.5,451.5"
+          data-next-relation-kind="sibling"
+          data-next-relation-label="Next sibling · via ¿Por qué debería ganar Argentina?"
+          data-next-route="1114.5,341.5;637.5,451.5;1118.5,396.5"
+          data-position="context"
+          aria-label="Slide 9 of 13, Messi sigue decisivo — 8 goles, 4 asistencias"
+          aria-hidden="false"
+          style="left: 910px; top: 322px; width: 409px; height: 39px; --slide-fill: #74ACDF; --slide-text: #0B2E4F; --slide-border: #FFFFFF; --slide-border-width: 2px; --slide-font-size: 16px; --slide-font-weight: 600; --slide-font-style: normal; --slide-line-height: 19px; --node-padding-y: 10px; --node-gap: 6px; --presentation-media-size: 20px;"
+        >
+          <div class="presentation-flip">
+            <article
+              class="presentation-node-front shape-roundedRect"
+              aria-hidden="false"
+            >
+              <svg
+                class="presentation-node-shape"
+                viewBox="0 0 409 39"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path
+                  d="M 409 19.5 L 409 20.656 C 409 25.938 409 28.579 408.101 31.422 C 406.971 34.526 404.526 36.971 401.422 38.101 C 398.579 39 395.938 39 390.656 39 L 18.344 39 C 13.062 39 10.421 39 7.578 38.101 C 4.474 36.971 2.029 34.526 0.899 31.422 C 0 28.579 0 25.938 0 20.656 L 0 18.344 C 0 13.062 0 10.421 0.899 7.578 C 2.029 4.474 4.474 2.029 7.578 0.899 C 10.421 0 13.062 0 18.344 0 L 390.656 0 C 395.938 0 398.579 0 401.422 0.899 C 404.526 2.029 406.971 4.474 408.101 7.578 C 409 10.421 409 13.062 409 18.344 Z"
+                  fill="#74ACDF"
+                  stroke="#FFFFFF"
+                  stroke-width="2"
+                ></path>
+                <path
+                  class="presentation-node-selection"
+                  d="M 409 19.5 L 409 20.656 C 409 25.938 409 28.579 408.101 31.422 C 406.971 34.526 404.526 36.971 401.422 38.101 C 398.579 39 395.938 39 390.656 39 L 18.344 39 C 13.062 39 10.421 39 7.578 38.101 C 4.474 36.971 2.029 34.526 0.899 31.422 C 0 28.579 0 25.938 0 20.656 L 0 18.344 C 0 13.062 0 10.421 0.899 7.578 C 2.029 4.474 4.474 2.029 7.578 0.899 C 10.421 0 13.062 0 18.344 0 L 390.656 0 C 395.938 0 398.579 0 401.422 0.899 C 404.526 2.029 406.971 4.474 408.101 7.578 C 409 10.421 409 13.062 409 18.344 Z"
+                  fill="none"
+                  stroke="#F7821B"
+                  stroke-width="2.5"
+                ></path>
+              </svg>
+              <span class="presentation-media" aria-label="Emoji 🐐">🐐</span>
+              <span class="presentation-node-title">
+                <h1>
+                  <span class="presentation-node-line">Messi sigue decisivo — 8 goles, 4 asistencias</span>
+                </h1>
+              </span>
+        
+            </article>
+        
+          </div>
+        </section>
+        <section
+          class="presentation-slide"
+          data-node-id="B1000002-2026-4019-8200-000000000002"
+          data-parent-id="B1000000-2026-4019-8200-000000000000"
+          data-sibling-index="1"
+          data-slide-title="Mejor ataque — 19 goles; 15,38 xG, el más alto"
+          data-depth="2"
+          data-map-x="1118.5"
+          data-map-y="396.5"
+          data-map-width="417"
+          data-map-height="39"
+          data-base-font-size="16"
+          data-base-line-height="19"
+          data-base-padding-y="10"
+          data-base-gap="6"
+          data-base-media-size="20"
+          data-has-note="false"
+          data-face="node"
+          data-previous-relation-kind="sibling"
+          data-previous-relation-label="Previous sibling · via ¿Por qué debería ganar Argentina?"
+          data-previous-route="1118.5,396.5;637.5,451.5;1114.5,341.5"
+          data-next-relation-kind="sibling"
+          data-next-relation-label="Next sibling · via ¿Por qué debería ganar Argentina?"
+          data-next-route="1118.5,396.5;637.5,451.5;1072,451.5"
+          data-position="context"
+          aria-label="Slide 10 of 13, Mejor ataque — 19 goles; 15,38 xG, el más alto"
+          aria-hidden="false"
+          style="left: 910px; top: 377px; width: 417px; height: 39px; --slide-fill: #FFFFFF; --slide-text: #2878A8; --slide-border: #74ACDF; --slide-border-width: 2px; --slide-font-size: 16px; --slide-font-weight: 600; --slide-font-style: normal; --slide-line-height: 19px; --node-padding-y: 10px; --node-gap: 6px; --presentation-media-size: 20px;"
+        >
+          <div class="presentation-flip">
+            <article
+              class="presentation-node-front shape-roundedRect"
+              aria-hidden="false"
+            >
+              <svg
+                class="presentation-node-shape"
+                viewBox="0 0 417 39"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path
+                  d="M 417 19.5 L 417 20.656 C 417 25.938 417 28.579 416.101 31.422 C 414.971 34.526 412.526 36.971 409.422 38.101 C 406.579 39 403.938 39 398.656 39 L 18.344 39 C 13.062 39 10.421 39 7.578 38.101 C 4.474 36.971 2.029 34.526 0.899 31.422 C 0 28.579 0 25.938 0 20.656 L 0 18.344 C 0 13.062 0 10.421 0.899 7.578 C 2.029 4.474 4.474 2.029 7.578 0.899 C 10.421 0 13.062 0 18.344 0 L 398.656 0 C 403.938 0 406.579 0 409.422 0.899 C 412.526 2.029 414.971 4.474 416.101 7.578 C 417 10.421 417 13.062 417 18.344 Z"
+                  fill="#FFFFFF"
+                  stroke="#74ACDF"
+                  stroke-width="2"
+                ></path>
+                <path
+                  class="presentation-node-selection"
+                  d="M 417 19.5 L 417 20.656 C 417 25.938 417 28.579 416.101 31.422 C 414.971 34.526 412.526 36.971 409.422 38.101 C 406.579 39 403.938 39 398.656 39 L 18.344 39 C 13.062 39 10.421 39 7.578 38.101 C 4.474 36.971 2.029 34.526 0.899 31.422 C 0 28.579 0 25.938 0 20.656 L 0 18.344 C 0 13.062 0 10.421 0.899 7.578 C 2.029 4.474 4.474 2.029 7.578 0.899 C 10.421 0 13.062 0 18.344 0 L 398.656 0 C 403.938 0 406.579 0 409.422 0.899 C 412.526 2.029 414.971 4.474 416.101 7.578 C 417 10.421 417 13.062 417 18.344 Z"
+                  fill="none"
+                  stroke="#F7821B"
+                  stroke-width="2.5"
+                ></path>
+              </svg>
+              <span class="presentation-media" aria-label="Emoji 💥">💥</span>
+              <span class="presentation-node-title">
+                <h1>
+                  <span class="presentation-node-line">Mejor ataque — 19 goles; 15,38 xG, el más alto</span>
+                </h1>
+              </span>
+        
+            </article>
+        
+          </div>
+        </section>
+        <section
+          class="presentation-slide"
+          data-node-id="B1000003-2026-4019-8200-000000000003"
+          data-parent-id="B1000000-2026-4019-8200-000000000000"
+          data-sibling-index="2"
+          data-slide-title="Torneo perfecto — 7 victorias de 7"
+          data-depth="2"
+          data-map-x="1072"
+          data-map-y="451.5"
+          data-map-width="324"
+          data-map-height="39"
+          data-base-font-size="16"
+          data-base-line-height="19"
+          data-base-padding-y="10"
+          data-base-gap="6"
+          data-base-media-size="20"
+          data-has-note="false"
+          data-face="node"
+          data-previous-relation-kind="sibling"
+          data-previous-relation-label="Previous sibling · via ¿Por qué debería ganar Argentina?"
+          data-previous-route="1072,451.5;637.5,451.5;1118.5,396.5"
+          data-next-relation-kind="sibling"
+          data-next-relation-label="Next sibling · via ¿Por qué debería ganar Argentina?"
+          data-next-route="1072,451.5;637.5,451.5;1129,506.5"
+          data-position="context"
+          aria-label="Slide 11 of 13, Torneo perfecto — 7 victorias de 7"
+          aria-hidden="false"
+          style="left: 910px; top: 432px; width: 324px; height: 39px; --slide-fill: #74ACDF; --slide-text: #0B2E4F; --slide-border: #FFFFFF; --slide-border-width: 2px; --slide-font-size: 16px; --slide-font-weight: 600; --slide-font-style: normal; --slide-line-height: 19px; --node-padding-y: 10px; --node-gap: 6px; --presentation-media-size: 20px;"
+        >
+          <div class="presentation-flip">
+            <article
+              class="presentation-node-front shape-roundedRect"
+              aria-hidden="false"
+            >
+              <svg
+                class="presentation-node-shape"
+                viewBox="0 0 324 39"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path
+                  d="M 324 19.5 L 324 20.656 C 324 25.938 324 28.579 323.101 31.422 C 321.971 34.526 319.526 36.971 316.422 38.101 C 313.579 39 310.938 39 305.656 39 L 18.344 39 C 13.062 39 10.421 39 7.578 38.101 C 4.474 36.971 2.029 34.526 0.899 31.422 C 0 28.579 0 25.938 0 20.656 L 0 18.344 C 0 13.062 0 10.421 0.899 7.578 C 2.029 4.474 4.474 2.029 7.578 0.899 C 10.421 0 13.062 0 18.344 0 L 305.656 0 C 310.938 0 313.579 0 316.422 0.899 C 319.526 2.029 321.971 4.474 323.101 7.578 C 324 10.421 324 13.062 324 18.344 Z"
+                  fill="#74ACDF"
+                  stroke="#FFFFFF"
+                  stroke-width="2"
+                ></path>
+                <path
+                  class="presentation-node-selection"
+                  d="M 324 19.5 L 324 20.656 C 324 25.938 324 28.579 323.101 31.422 C 321.971 34.526 319.526 36.971 316.422 38.101 C 313.579 39 310.938 39 305.656 39 L 18.344 39 C 13.062 39 10.421 39 7.578 38.101 C 4.474 36.971 2.029 34.526 0.899 31.422 C 0 28.579 0 25.938 0 20.656 L 0 18.344 C 0 13.062 0 10.421 0.899 7.578 C 2.029 4.474 4.474 2.029 7.578 0.899 C 10.421 0 13.062 0 18.344 0 L 305.656 0 C 310.938 0 313.579 0 316.422 0.899 C 319.526 2.029 321.971 4.474 323.101 7.578 C 324 10.421 324 13.062 324 18.344 Z"
+                  fill="none"
+                  stroke="#F7821B"
+                  stroke-width="2.5"
+                ></path>
+              </svg>
+              <span class="presentation-media" aria-label="Emoji 💯">💯</span>
+              <span class="presentation-node-title">
+                <h1>
+                  <span class="presentation-node-line">Torneo perfecto — 7 victorias de 7</span>
+                </h1>
+              </span>
+        
+            </article>
+        
+          </div>
+        </section>
+        <section
+          class="presentation-slide"
+          data-node-id="B1000004-2026-4019-8200-000000000004"
+          data-parent-id="B1000000-2026-4019-8200-000000000000"
+          data-sibling-index="3"
+          data-slide-title="Acero en el medio — Enzo, Mac Allister y Paredes"
+          data-depth="2"
+          data-map-x="1129"
+          data-map-y="506.5"
+          data-map-width="438"
+          data-map-height="39"
+          data-base-font-size="16"
+          data-base-line-height="19"
+          data-base-padding-y="10"
+          data-base-gap="6"
+          data-base-media-size="20"
+          data-has-note="false"
+          data-face="node"
+          data-previous-relation-kind="sibling"
+          data-previous-relation-label="Previous sibling · via ¿Por qué debería ganar Argentina?"
+          data-previous-route="1129,506.5;637.5,451.5;1072,451.5"
+          data-next-relation-kind="sibling"
+          data-next-relation-label="Next sibling · via ¿Por qué debería ganar Argentina?"
+          data-next-route="1129,506.5;637.5,451.5;1119,561.5"
+          data-position="context"
+          aria-label="Slide 12 of 13, Acero en el medio — Enzo, Mac Allister y Paredes"
+          aria-hidden="false"
+          style="left: 910px; top: 487px; width: 438px; height: 39px; --slide-fill: #FFFFFF; --slide-text: #2878A8; --slide-border: #74ACDF; --slide-border-width: 2px; --slide-font-size: 16px; --slide-font-weight: 600; --slide-font-style: normal; --slide-line-height: 19px; --node-padding-y: 10px; --node-gap: 6px; --presentation-media-size: 20px;"
+        >
+          <div class="presentation-flip">
+            <article
+              class="presentation-node-front shape-roundedRect"
+              aria-hidden="false"
+            >
+              <svg
+                class="presentation-node-shape"
+                viewBox="0 0 438 39"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path
+                  d="M 438 19.5 L 438 20.656 C 438 25.938 438 28.579 437.101 31.422 C 435.971 34.526 433.526 36.971 430.422 38.101 C 427.579 39 424.938 39 419.656 39 L 18.344 39 C 13.062 39 10.421 39 7.578 38.101 C 4.474 36.971 2.029 34.526 0.899 31.422 C 0 28.579 0 25.938 0 20.656 L 0 18.344 C 0 13.062 0 10.421 0.899 7.578 C 2.029 4.474 4.474 2.029 7.578 0.899 C 10.421 0 13.062 0 18.344 0 L 419.656 0 C 424.938 0 427.579 0 430.422 0.899 C 433.526 2.029 435.971 4.474 437.101 7.578 C 438 10.421 438 13.062 438 18.344 Z"
+                  fill="#FFFFFF"
+                  stroke="#74ACDF"
+                  stroke-width="2"
+                ></path>
+                <path
+                  class="presentation-node-selection"
+                  d="M 438 19.5 L 438 20.656 C 438 25.938 438 28.579 437.101 31.422 C 435.971 34.526 433.526 36.971 430.422 38.101 C 427.579 39 424.938 39 419.656 39 L 18.344 39 C 13.062 39 10.421 39 7.578 38.101 C 4.474 36.971 2.029 34.526 0.899 31.422 C 0 28.579 0 25.938 0 20.656 L 0 18.344 C 0 13.062 0 10.421 0.899 7.578 C 2.029 4.474 4.474 2.029 7.578 0.899 C 10.421 0 13.062 0 18.344 0 L 419.656 0 C 424.938 0 427.579 0 430.422 0.899 C 433.526 2.029 435.971 4.474 437.101 7.578 C 438 10.421 438 13.062 438 18.344 Z"
+                  fill="none"
+                  stroke="#F7821B"
+                  stroke-width="2.5"
+                ></path>
+              </svg>
+              <span class="presentation-media" aria-label="Emoji 🛡️">🛡️</span>
+              <span class="presentation-node-title">
+                <h1>
+                  <span class="presentation-node-line">Acero en el medio — Enzo, Mac Allister y Paredes</span>
+                </h1>
+              </span>
+        
+            </article>
+        
+          </div>
+        </section>
+        <section
+          class="presentation-slide"
+          data-node-id="B1000005-2026-4019-8200-000000000005"
+          data-parent-id="B1000000-2026-4019-8200-000000000000"
+          data-sibling-index="4"
+          data-slide-title="ADN campeón — 3 grandes títulos desde 2021"
+          data-depth="2"
+          data-map-x="1119"
+          data-map-y="561.5"
+          data-map-width="418"
+          data-map-height="39"
+          data-base-font-size="16"
+          data-base-line-height="19"
+          data-base-padding-y="10"
+          data-base-gap="6"
+          data-base-media-size="20"
+          data-has-note="false"
+          data-face="node"
+          data-previous-relation-kind="sibling"
+          data-previous-relation-label="Previous sibling · via ¿Por qué debería ganar Argentina?"
+          data-previous-route="1119,561.5;637.5,451.5;1129,506.5"
+          data-next-relation-kind="none"
+          data-next-relation-label=""
+          data-next-route=""
+          data-position="context"
+          aria-label="Slide 13 of 13, ADN campeón — 3 grandes títulos desde 2021"
+          aria-hidden="false"
+          style="left: 910px; top: 542px; width: 418px; height: 39px; --slide-fill: #74ACDF; --slide-text: #0B2E4F; --slide-border: #FCBF49; --slide-border-width: 2px; --slide-font-size: 16px; --slide-font-weight: 600; --slide-font-style: normal; --slide-line-height: 19px; --node-padding-y: 10px; --node-gap: 6px; --presentation-media-size: 20px;"
+        >
+          <div class="presentation-flip">
+            <article
+              class="presentation-node-front shape-roundedRect"
+              aria-hidden="false"
+            >
+              <svg
+                class="presentation-node-shape"
+                viewBox="0 0 418 39"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path
+                  d="M 418 19.5 L 418 20.656 C 418 25.938 418 28.579 417.101 31.422 C 415.971 34.526 413.526 36.971 410.422 38.101 C 407.579 39 404.938 39 399.656 39 L 18.344 39 C 13.062 39 10.421 39 7.578 38.101 C 4.474 36.971 2.029 34.526 0.899 31.422 C 0 28.579 0 25.938 0 20.656 L 0 18.344 C 0 13.062 0 10.421 0.899 7.578 C 2.029 4.474 4.474 2.029 7.578 0.899 C 10.421 0 13.062 0 18.344 0 L 399.656 0 C 404.938 0 407.579 0 410.422 0.899 C 413.526 2.029 415.971 4.474 417.101 7.578 C 418 10.421 418 13.062 418 18.344 Z"
+                  fill="#74ACDF"
+                  stroke="#FCBF49"
+                  stroke-width="2"
+                ></path>
+                <path
+                  class="presentation-node-selection"
+                  d="M 418 19.5 L 418 20.656 C 418 25.938 418 28.579 417.101 31.422 C 415.971 34.526 413.526 36.971 410.422 38.101 C 407.579 39 404.938 39 399.656 39 L 18.344 39 C 13.062 39 10.421 39 7.578 38.101 C 4.474 36.971 2.029 34.526 0.899 31.422 C 0 28.579 0 25.938 0 20.656 L 0 18.344 C 0 13.062 0 10.421 0.899 7.578 C 2.029 4.474 4.474 2.029 7.578 0.899 C 10.421 0 13.062 0 18.344 0 L 399.656 0 C 404.938 0 407.579 0 410.422 0.899 C 413.526 2.029 415.971 4.474 417.101 7.578 C 418 10.421 418 13.062 418 18.344 Z"
+                  fill="none"
+                  stroke="#F7821B"
+                  stroke-width="2.5"
+                ></path>
+              </svg>
+              <span class="presentation-media" aria-label="Emoji 🏆">🏆</span>
+              <span class="presentation-node-title">
+                <h1>
+                  <span class="presentation-node-line">ADN campeón — 3 grandes títulos desde 2021</span>
+                </h1>
+              </span>
+        
+            </article>
+        
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+  <script>
+    (() => {
+      "use strict";
+
+      const viewport = document.getElementById("viewport");
+      const stage = document.getElementById("stage");
+      const presentation = document.getElementById("presentation");
+      const mapModeButton = document.getElementById("map-mode-button");
+      const presentationModeButton =
+        document.getElementById("presentation-mode-button");
+      const progress = document.getElementById("presentation-progress");
+      const slides = Array.from(
+        document.querySelectorAll(".presentation-slide")
+      );
+      const presentationStage =
+        document.getElementById("presentation-stage");
+      const presentationWorld =
+        document.getElementById("presentation-world");
+      const mapWidth = Number(viewport.dataset.mapWidth);
+      const mapHeight = Number(viewport.dataset.mapHeight);
+      let currentMode = "presentation";
+      let currentSlideIndex = 0;
+      const currentSlide = () => slides[currentSlideIndex] ?? null;
+      const stepCountForSlide = slide =>
+        slide?.dataset.hasNote === "true" ? 2 : 1;
+      const presentationStepCount = slides.reduce(
+        (total, slide) => total + stepCountForSlide(slide),
+        0
+      );
+      const presentationStepIndex = () => {
+        const priorSteps = slides
+          .slice(0, currentSlideIndex)
+          .reduce(
+            (total, slide) => total + stepCountForSlide(slide),
+            0
+          );
+        return priorSteps
+          + (currentSlide()?.dataset.face === "note" ? 1 : 0);
+      };
+      const minimumScale = 0.02;
+      const maximumScale = 8;
+      let scale = 1;
+      let offsetX = 0;
+      let offsetY = 0;
+      let fitted = true;
+      const activePointers = new Map();
+      const tapMoveThreshold = 10;
+      const doubleTapDistance = 32;
+      const doubleTapDelay = 350;
+      let tapCandidate = null;
+      let mapNodePointer = null;
+      let lastTap = null;
+      let viewportBounds = viewport.getBoundingClientRect();
+      let viewportWidth = viewportBounds.width;
+      let viewportHeight = viewportBounds.height;
+      const reducedMotion = matchMedia(
+        "(prefers-reduced-motion: reduce)"
+      );
+      let activeCameraAnimation = null;
+      let presentationCameraPoint = null;
+      let presentationCameraScale = 1;
+      let presentationRenderViewportKey = "";
+      let presentationSwipe = null;
+
+      const slideMapPoint = slide => {
+        const x = Number(slide?.dataset.mapX);
+        const y = Number(slide?.dataset.mapY);
+        return Number.isFinite(x) && Number.isFinite(y)
+          ? { x, y }
+          : null;
+      };
+
+      const slideMapFrame = slide => {
+        const center = slideMapPoint(slide);
+        const width = Number(slide?.dataset.mapWidth);
+        const height = Number(slide?.dataset.mapHeight);
+        if (
+          !center
+          || !Number.isFinite(width)
+          || !Number.isFinite(height)
+        ) {
+          return null;
+        }
+        return {
+          minX: center.x - width / 2,
+          maxX: center.x + width / 2,
+          minY: center.y - height / 2,
+          maxY: center.y + height / 2,
+        };
+      };
+
+      const parseSpatialRoute = value => {
+        if (!value) return [];
+        return value
+          .split(";")
+          .map(pair => {
+            const [x, y] = pair.split(",").map(Number);
+            return Number.isFinite(x) && Number.isFinite(y)
+              ? { x, y }
+              : null;
+          })
+          .filter(Boolean);
+      };
+
+      const presentationSafeRect = () => {
+        const width = Math.max(0, window.innerWidth);
+        const height = Math.max(0, window.innerHeight);
+        const peek = Math.min(
+          28,
+          Math.max(16, Math.min(width, height) * 0.03)
+        );
+        const controlsAtBottom = matchMedia(
+          "(max-width: 640px), (max-aspect-ratio: 4 / 5)"
+        ).matches;
+        const top = controlsAtBottom ? peek : Math.max(peek, 64);
+        const bottom = controlsAtBottom ? Math.max(peek, 64) : peek;
+        return {
+          minX: peek,
+          maxX: Math.max(peek, width - peek),
+          minY: top,
+          maxY: Math.max(top, height - bottom),
+        };
+      };
+
+      const presentationPeekCap = (current, candidate) => {
+        const center = slideMapPoint(current);
+        const frame = slideMapFrame(candidate);
+        if (!center || !frame) return 0;
+        const safe = presentationSafeRect();
+        const screenCenter = {
+          x: window.innerWidth / 2,
+          y: window.innerHeight / 2,
+        };
+        let capX = Number.POSITIVE_INFINITY;
+        if (frame.minX > center.x) {
+          capX =
+            (safe.maxX - screenCenter.x)
+            / (frame.minX - center.x);
+        } else if (frame.maxX < center.x) {
+          capX =
+            (screenCenter.x - safe.minX)
+            / (center.x - frame.maxX);
+        }
+        let capY = Number.POSITIVE_INFINITY;
+        if (frame.minY > center.y) {
+          capY =
+            (safe.maxY - screenCenter.y)
+            / (frame.minY - center.y);
+        } else if (frame.maxY < center.y) {
+          capY =
+            (screenCenter.y - safe.minY)
+            / (center.y - frame.maxY);
+        }
+        return Math.max(0, Math.min(capX, capY));
+      };
+
+      const presentationNeighborCandidates = slide => {
+        if (!slide) return [];
+        const slideIndex = slides.indexOf(slide);
+        const parentID = slide.dataset.parentId || null;
+        const siblingIndex = Number(slide.dataset.siblingIndex);
+        const result = [];
+        const seen = new Set([slide.dataset.nodeId]);
+        const append = candidate => {
+          const id = candidate?.dataset.nodeId;
+          if (!candidate || !id || seen.has(id)) return;
+          seen.add(id);
+          result.push(candidate);
+        };
+
+        // Deterministic tie order: next DFS, previous DFS, parent,
+        // previous sibling, next sibling, then children in stored order.
+        append(slides[slideIndex + 1]);
+        append(slides[slideIndex - 1]);
+        append(
+          parentID
+            ? slides.find(item => item.dataset.nodeId === parentID)
+            : null
+        );
+        if (parentID && Number.isFinite(siblingIndex)) {
+          append(slides.find(item =>
+            item.dataset.parentId === parentID
+            && Number(item.dataset.siblingIndex) === siblingIndex - 1
+          ));
+          append(slides.find(item =>
+            item.dataset.parentId === parentID
+            && Number(item.dataset.siblingIndex) === siblingIndex + 1
+          ));
+        }
+        slides
+          .filter(item => item.dataset.parentId === slide.dataset.nodeId)
+          .sort(
+            (first, second) =>
+              Number(first.dataset.siblingIndex)
+              - Number(second.dataset.siblingIndex)
+          )
+          .forEach(append);
+        return result;
+      };
+
+      const presentationScaleFor = slide => {
+        if (!slide) return 1;
+        const width = Math.max(1, Number(slide.dataset.mapWidth) || 1);
+        const height = Math.max(1, Number(slide.dataset.mapHeight) || 1);
+        const base = Math.min(
+          4.8,
+          Math.max(
+            1.35,
+            Math.min(
+              window.innerWidth * 0.46 / width,
+              window.innerHeight * 0.24 / height
+            )
+          )
+        );
+        const floor = Math.min(base, Math.max(1, base * 0.68));
+        const slideIndex = slides.indexOf(slide);
+        const sequential = [
+          slides[slideIndex + 1],
+          slides[slideIndex - 1],
+        ].filter(Boolean);
+        const sequentialCaps = sequential.map(candidate =>
+          presentationPeekCap(slide, candidate)
+        ).filter(cap => Number.isFinite(cap) && cap > 0);
+        if (sequentialCaps.length > 0) {
+          // Prefer keeping the actual previous/next DFS steps peeking
+          // into the viewport, but never make the focused node smaller
+          // than its readable floor. Long branch returns zoom out
+          // during camera travel instead of remaining zoomed out.
+          return Math.min(
+            base,
+            Math.max(floor, Math.min(...sequentialCaps))
+          );
+        }
+
+        const candidates = presentationNeighborCandidates(slide);
+        if (candidates.length === 0) return base;
+        let bestCap = null;
+        candidates.forEach(candidate => {
+          const cap = presentationPeekCap(slide, candidate);
+          if (
+            cap >= floor
+            && (bestCap === null || cap > bestCap)
+          ) {
+            bestCap = cap;
+          }
+        });
+        return Math.min(base, bestCap ?? floor);
+      };
+
+      const syncPresentationRenderScale = () => {
+        const viewportKey =
+          `${window.innerWidth}x${window.innerHeight}`;
+        if (viewportKey === presentationRenderViewportKey) return;
+        presentationRenderViewportKey = viewportKey;
+        slides.forEach(slide => {
+          // Give every slide a stable intrinsic render resolution
+          // based on the scale it uses when focused. The camera can
+          // then animate the one shared world without resizing node
+          // bodies and text on a separate timeline.
+          const renderScale = presentationScaleFor(slide);
+          const width = Math.max(
+            1,
+            Number(slide.dataset.mapWidth) || 1
+          );
+          const height = Math.max(
+            1,
+            Number(slide.dataset.mapHeight) || 1
+          );
+          const centerX = Number(slide.dataset.mapX) || 0;
+          const centerY = Number(slide.dataset.mapY) || 0;
+          const baseFontSize =
+            Number(slide.dataset.baseFontSize) || 14;
+          const baseLineHeight =
+            Number(slide.dataset.baseLineHeight) || 20;
+          const basePaddingY =
+            Number(slide.dataset.basePaddingY) || 10;
+          const baseGap =
+            Number(slide.dataset.baseGap) || 0;
+          const baseMediaSize =
+            Number(slide.dataset.baseMediaSize) || 20;
+
+          slide.style.left = `${centerX}px`;
+          slide.style.top = `${centerY}px`;
+          slide.style.width = `${width * renderScale}px`;
+          slide.style.height = `${height * renderScale}px`;
+          slide.style.transform =
+            `scale(${1 / renderScale}) translate(-50%, -50%)`;
+          slide.style.setProperty(
+            "--presentation-render-scale",
+            String(renderScale)
+          );
+          slide.style.setProperty(
+            "--rendered-slide-font-size",
+            `${baseFontSize * renderScale}px`
+          );
+          slide.style.setProperty(
+            "--rendered-slide-line-height",
+            `${baseLineHeight * renderScale}px`
+          );
+          slide.style.setProperty(
+            "--rendered-title-max-height",
+            `${baseLineHeight * renderScale * 3}px`
+          );
+          slide.style.setProperty(
+            "--rendered-node-padding-y",
+            `${basePaddingY * renderScale}px`
+          );
+          slide.style.setProperty(
+            "--rendered-node-padding-x",
+            `${16 * renderScale}px`
+          );
+          slide.style.setProperty(
+            "--rendered-node-gap",
+            `${baseGap * renderScale}px`
+          );
+          slide.style.setProperty(
+            "--rendered-media-size",
+            `${baseMediaSize * renderScale}px`
+          );
+          slide.style.setProperty(
+            "--rendered-media-font-size",
+            `${Math.max(1, baseMediaSize - 4) * renderScale}px`
+          );
+        });
+      };
+
+      const syncPresentationNoteScale = (slide, worldScale) => {
+        if (!slide || !Number.isFinite(worldScale) || worldScale <= 0) {
+          return;
+        }
+        // Every slide is rendered at destination resolution and
+        // counter-scaled as a whole, so the back cover is already
+        // screen-sized and needs no second rasterizing scale.
+        slide.style.setProperty(
+          "--note-counter-scale",
+          "1"
+        );
+      };
+
+      const presentationWorldTransform = (
+        point,
+        worldScale,
+        alignToDevicePixels = true
+      ) => {
+        const pixelRatio = Math.max(
+          1,
+          Number(window.devicePixelRatio) || 1
+        );
+        const align = value =>
+          Math.round(value * pixelRatio) / pixelRatio;
+        const rawX = -point.x * worldScale;
+        const rawY = -point.y * worldScale;
+        const x = alignToDevicePixels ? align(rawX) : rawX;
+        const y = alignToDevicePixels ? align(rawY) : rawY;
+        return `translate(${x}px, ${y}px) scale(${worldScale})`;
+      };
+
+      const presentationBackgroundPosition = (point, worldScale) => [
+        "center",
+        `calc(50% - ${point.x * worldScale}px) `
+          + `calc(50% - ${point.y * worldScale}px)`,
+        `calc(50% - ${point.x * worldScale}px) `
+          + `calc(50% - ${point.y * worldScale}px)`,
+      ].join(", ");
+
+      const setCameraFrame = (
+        point,
+        worldScale,
+        alignToDevicePixels = true
+      ) => {
+        if (!point || !Number.isFinite(worldScale)) return;
+        presentationWorld.style.transform =
+          presentationWorldTransform(
+            point,
+            worldScale,
+            alignToDevicePixels
+          );
+        presentation.style.backgroundPosition =
+          presentationBackgroundPosition(point, worldScale);
+        presentationCameraPoint = { x: point.x, y: point.y };
+        presentationCameraScale = worldScale;
+      };
+
+      const presentationRouteDistance = points => {
+        if (!Array.isArray(points) || points.length < 2) return 0;
+        return points.slice(1).reduce((total, point, index) => {
+          const previous = points[index];
+          return total + Math.hypot(
+            point.x - previous.x,
+            point.y - previous.y
+          );
+        }, 0);
+      };
+
+      const presentationTravelDuration = points => {
+        if (reducedMotion.matches) return 180;
+        const routeLength = Array.isArray(points) ? points.length : 0;
+        const viewportSpan = Math.max(
+          1,
+          Math.min(window.innerWidth, window.innerHeight)
+        );
+        const distanceDuration = Math.min(
+          520,
+          presentationRouteDistance(points) / viewportSpan * 260
+        );
+        return Math.min(
+          1_200,
+          440
+            + Math.max(0, routeLength - 2) * 130
+            + distanceDuration
+        );
+      };
+
+      const presentationOverviewScale = (
+        points,
+        sourceScale,
+        destinationScale
+      ) => {
+        if (points.length < 2) {
+          return Math.min(sourceScale, destinationScale);
+        }
+        const safe = presentationSafeRect();
+        const xs = points.map(point => point.x);
+        const ys = points.map(point => point.y);
+        const spanX = Math.max(...xs) - Math.min(...xs);
+        const spanY = Math.max(...ys) - Math.min(...ys);
+        const availableWidth =
+          Math.max(1, safe.maxX - safe.minX) * 0.72;
+        const availableHeight =
+          Math.max(1, safe.maxY - safe.minY) * 0.72;
+        return Math.max(
+          0.45,
+          Math.min(
+            sourceScale,
+            destinationScale,
+            spanX > 1
+              ? availableWidth / spanX
+              : Number.POSITIVE_INFINITY,
+            spanY > 1
+              ? availableHeight / spanY
+              : Number.POSITIVE_INFINITY
+          )
+        );
+      };
+
+      const presentationCameraFrames = (
+        points,
+        sourceScale,
+        destinationScale
+      ) => {
+        if (points.length < 2 || reducedMotion.matches) {
+          return [
+            {
+              point: points[0],
+              scale: sourceScale,
+              offset: 0,
+            },
+            {
+              point: points.at(-1),
+              scale: destinationScale,
+              offset: 1,
+            },
+          ];
+        }
+        const overviewScale = presentationOverviewScale(
+          points,
+          sourceScale,
+          destinationScale
+        );
+        const anchors = points.length === 2
+          ? [
+              points[0],
+              {
+                x: (points[0].x + points[1].x) / 2,
+                y: (points[0].y + points[1].y) / 2,
+              },
+              points[1],
+            ]
+          : points;
+        const segmentLengths = anchors.slice(1).map(
+          (point, index) => Math.hypot(
+            point.x - anchors[index].x,
+            point.y - anchors[index].y
+          )
+        );
+        const totalDistance = Math.max(
+          1,
+          segmentLengths.reduce((total, length) => total + length, 0)
+        );
+        let traveled = 0;
+        return anchors.map((point, index) => {
+          if (index > 0) traveled += segmentLengths[index - 1];
+          return {
+            point,
+            scale: index === 0
+              ? sourceScale
+              : index === anchors.length - 1
+                ? destinationScale
+                : overviewScale,
+            offset: index === anchors.length - 1
+              ? 1
+              : traveled / totalDistance,
+          };
+        });
+      };
+
+      const cameraFrameAt = (frames, progress) => {
+        const nextIndex = frames.findIndex(
+          frame => frame.offset >= progress
+        );
+        if (nextIndex <= 0) return frames[0];
+        const next = frames[nextIndex];
+        const previous = frames[nextIndex - 1];
+        const span = Math.max(0.0001, next.offset - previous.offset);
+        const localProgress =
+          (progress - previous.offset) / span;
+        return {
+          point: {
+            x: previous.point.x
+              + (next.point.x - previous.point.x) * localProgress,
+            y: previous.point.y
+              + (next.point.y - previous.point.y) * localProgress,
+          },
+          scale: previous.scale
+            + (next.scale - previous.scale) * localProgress,
+        };
+      };
+
+      const cameraEase = progress =>
+        progress < 0.5
+          ? 4 * progress * progress * progress
+          : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+      const cancelCameraAnimation = () => {
+        const animation = activeCameraAnimation;
+        if (!animation) return;
+        activeCameraAnimation = null;
+        cancelAnimationFrame(animation.frameID);
+        presentationWorld.style.willChange = "auto";
+      };
+
+      const travelCamera = route => {
+        const destination = slideMapPoint(currentSlide());
+        if (!destination) return;
+        const destinationScale =
+          presentationScaleFor(currentSlide());
+        syncPresentationRenderScale();
+        syncPresentationNoteScale(
+          currentSlide(),
+          destinationScale
+        );
+        const source =
+          presentationCameraPoint ?? route[0] ?? destination;
+        const sourceScale = presentationCameraScale;
+        cancelCameraAnimation();
+        presentationWorld.style.willChange = "auto";
+        const points = route.length > 0 ? [...route] : [source, destination];
+        if (
+          points[0]?.x !== source.x
+          || points[0]?.y !== source.y
+        ) {
+          points.unshift(source);
+        }
+        if (
+          points.at(-1)?.x !== destination.x
+          || points.at(-1)?.y !== destination.y
+        ) {
+          points.push(destination);
+        }
+        if (
+          points.length < 2
+          || (
+            Math.abs(source.x - destination.x) < 0.001
+            && Math.abs(source.y - destination.y) < 0.001
+            && Math.abs(sourceScale - destinationScale) < 0.001
+          )
+        ) {
+          setCameraFrame(destination, destinationScale);
+          return;
+        }
+        presentationWorld.style.willChange = "transform";
+        const frames = presentationCameraFrames(
+          points,
+          sourceScale,
+          destinationScale
+        );
+        const duration = presentationTravelDuration(points);
+        const animation = {
+          frameID: 0,
+          startedAt: performance.now(),
+        };
+        activeCameraAnimation = animation;
+        setCameraFrame(source, sourceScale, false);
+        const stepCameraAnimation = timestamp => {
+          if (activeCameraAnimation !== animation) return;
+          const rawProgress = Math.min(
+            1,
+            Math.max(0, (timestamp - animation.startedAt) / duration)
+          );
+          const frame = cameraFrameAt(
+            frames,
+            cameraEase(rawProgress)
+          );
+          setCameraFrame(frame.point, frame.scale, false);
+          if (rawProgress < 1) {
+            animation.frameID =
+              requestAnimationFrame(stepCameraAnimation);
+            return;
+          }
+          activeCameraAnimation = null;
+          presentationWorld.style.willChange = "auto";
+          setCameraFrame(destination, destinationScale);
+        };
+        animation.frameID =
+          requestAnimationFrame(stepCameraAnimation);
+      };
+
+      const updatePresentationSpatialPositions = () => {
+        const destination = slideMapPoint(currentSlide());
+        if (!destination) return;
+        cancelCameraAnimation();
+        syncPresentationRenderScale();
+        const worldScale = presentationScaleFor(currentSlide());
+        syncPresentationNoteScale(currentSlide(), worldScale);
+        presentationWorld.style.willChange = "auto";
+        setCameraFrame(
+          destination,
+          worldScale
+        );
+      };
+
+      const updatePresentationConnections = () => {
+        // Connections live in the transformed map world, so they move
+        // with the same camera as their nodes and never need synthetic
+        // screen-space arrows or straight-line substitutes.
+      };
+
+      const originalSlideTabIndexes = new WeakMap();
+      const updateSlideDescendantFocus = (slide, isCurrent) => {
+        const activeFace = slide.dataset.face || "node";
+        slide.querySelectorAll(
+          "button, a[href], iframe, input, textarea, select, [tabindex]"
+        ).forEach(element => {
+          if (!originalSlideTabIndexes.has(element)) {
+            originalSlideTabIndexes.set(
+              element,
+              element.getAttribute("tabindex")
+            );
+          }
+          const belongsToNode =
+            element.closest(".presentation-node-front") !== null;
+          const belongsToNote =
+            element.closest(".presentation-note-back") !== null;
+          const belongsToActiveFace =
+            (activeFace === "node" && belongsToNode)
+            || (activeFace === "note" && belongsToNote);
+          if (isCurrent && belongsToActiveFace) {
+            const original = originalSlideTabIndexes.get(element);
+            if (original === null) {
+              element.removeAttribute("tabindex");
+            } else {
+              element.setAttribute("tabindex", original);
+            }
+          } else {
+            element.tabIndex = -1;
+          }
+        });
+      };
+
+      const supportsEmbeddedYouTube =
+        location.protocol === "http:"
+        || location.protocol === "https:";
+
+      const resetYouTube = host => {
+        const iframe = host.querySelector("iframe.youtube-frame");
+        if (iframe) {
+          iframe.src = "about:blank";
+          iframe.remove();
+        }
+        const button = host.querySelector("[data-youtube-play]");
+        host.hidden = !supportsEmbeddedYouTube;
+        if (button) button.hidden = !supportsEmbeddedYouTube;
+      };
+
+      const loadYouTube = (host, autoplay = false) => {
+        if (
+          !supportsEmbeddedYouTube
+          || !host
+          || host.querySelector("iframe.youtube-frame")
+        ) return;
+        host.hidden = false;
+        const videoID = host.dataset.videoId;
+        const start = Number(host.dataset.start || 0);
+        if (!/^[A-Za-z0-9_-]{11}$/.test(videoID)) return;
+        const iframe = document.createElement("iframe");
+        iframe.className = "youtube-frame";
+        iframe.title = "YouTube video player";
+        iframe.allow =
+          "autoplay; encrypted-media; picture-in-picture";
+        iframe.allowFullscreen = true;
+        iframe.referrerPolicy = "strict-origin-when-cross-origin";
+        iframe.src =
+          `https://www.youtube-nocookie.com/embed/${videoID}`
+          + `?playsinline=1&autoplay=${autoplay ? 1 : 0}`
+          + `${start > 0 ? `&start=${start}` : ""}`;
+        const button = host.querySelector("[data-youtube-play]");
+        if (button) button.hidden = true;
+        host.append(iframe);
+      };
+
+      const syncPresentationYouTubePlayers = () => {
+        const current = currentSlide();
+        document
+          .querySelectorAll(
+            ".presentation-slide [data-youtube-host]"
+          )
+          .forEach(host => {
+            const note = host.closest(".presentation-note");
+            const belongsToCurrent = current?.contains(host) === true;
+            if (
+              belongsToCurrent
+              && current?.dataset.face === "note"
+              && note
+              && host.dataset.autoLoad === "true"
+            ) {
+              loadYouTube(host, false);
+            } else {
+              resetYouTube(host);
+            }
+          });
+        if (current) updateSlideDescendantFocus(current, true);
+      };
+
+      const updatePresentation = (
+        direction = 0,
+        updateHash = true,
+        cameraRoute = []
+      ) => {
+        currentSlideIndex = Math.min(
+          Math.max(0, currentSlideIndex),
+          Math.max(0, slides.length - 1)
+        );
+        const durationRoute = cameraRoute.length > 0
+          ? cameraRoute
+          : [
+              presentationCameraPoint,
+              slideMapPoint(currentSlide()),
+            ].filter(Boolean);
+        presentation.style.setProperty(
+          "--presentation-travel-duration",
+          `${presentationTravelDuration(durationRoute)}ms`
+        );
+        slides.forEach((slide, index) => {
+          let position = "context";
+          if (index === currentSlideIndex) position = "current";
+          else if (index === currentSlideIndex - 1) position = "previous";
+          else if (index === currentSlideIndex + 1) position = "next";
+          slide.dataset.position = position;
+          const isCurrent = position === "current";
+          const isPreview = position === "previous" || position === "next";
+          const nodeFace = slide.querySelector(
+            ".presentation-node-front"
+          );
+          const noteFace = slide.querySelector(
+            ".presentation-note-back"
+          );
+          const showsNote =
+            isCurrent && slide.dataset.face === "note";
+          nodeFace?.setAttribute(
+            "aria-hidden",
+            String(!isCurrent || showsNote)
+          );
+          noteFace?.setAttribute(
+            "aria-hidden",
+            String(!isCurrent || !showsNote)
+          );
+          slide.setAttribute(
+            "aria-hidden",
+            String(!isCurrent && !isPreview)
+          );
+          updateSlideDescendantFocus(slide, isCurrent);
+          if (isPreview) {
+            slide.setAttribute("role", "button");
+            slide.tabIndex = 0;
+            const title =
+              slide.dataset.slideTitle?.trim() || "Untitled node";
+            const current = currentSlide();
+            const relation = position === "previous"
+              ? current?.dataset.previousRelationLabel
+              : current?.dataset.nextRelationLabel;
+            slide.setAttribute(
+              "aria-label",
+              position === "previous"
+                ? `Previous slide: ${title}. ${relation || ""}`
+                : `Next slide: ${title}. ${relation || ""}`
+            );
+          } else if (isCurrent) {
+            slide.setAttribute("role", "group");
+            slide.tabIndex = -1;
+            const title =
+              slide.querySelector("h1")?.textContent?.trim()
+              || "Untitled node";
+            const stepTitle = showsNote
+              ? `Note for ${title}`
+              : title;
+            slide.setAttribute(
+              "aria-label",
+              `Step ${presentationStepIndex() + 1}`
+              + ` of ${presentationStepCount}, ${stepTitle}`
+            );
+          } else {
+            slide.removeAttribute("role");
+            slide.tabIndex = -1;
+            slide.removeAttribute("aria-label");
+          }
+        });
+        travelCamera(cameraRoute);
+        syncPresentationYouTubePlayers();
+        progress.textContent =
+          presentationStepCount === 0
+            ? "0 of 0"
+            : `${presentationStepIndex() + 1}`
+              + ` of ${presentationStepCount}`;
+        if (updateHash && currentSlide()) {
+          const faceSuffix =
+            currentSlide().dataset.face === "note"
+              ? "&face=note"
+              : "";
+          history.replaceState(
+            null,
+            "",
+            `#node=${encodeURIComponent(currentSlide().dataset.nodeId)}`
+            + faceSuffix
+          );
+        }
+        requestAnimationFrame(updatePresentationConnections);
+      };
+
+      const setSlideFace = (slide, face) => {
+        if (!slide) return;
+        const showsNote =
+          face === "note" && slide.dataset.hasNote === "true";
+        slide.dataset.face = showsNote ? "note" : "node";
+        slide
+          .querySelector(".presentation-node-front")
+          ?.setAttribute("aria-hidden", String(showsNote));
+        slide
+          .querySelector(".presentation-note-back")
+          ?.setAttribute("aria-hidden", String(!showsNote));
+      };
+
+      const resetPresentationFaces = () => {
+        slides.forEach(slide => setSlideFace(slide, "node"));
+      };
+
+      const navigatePresentation = delta => {
+        const source = currentSlide();
+        if (!source || delta === 0) return;
+        if (
+          delta > 0
+          && source.dataset.face === "node"
+          && source.dataset.hasNote === "true"
+        ) {
+          toggleCurrentNote();
+          return;
+        }
+        if (delta < 0 && source.dataset.face === "note") {
+          toggleCurrentNote();
+          return;
+        }
+        const next = Math.min(
+          Math.max(0, currentSlideIndex + delta),
+          Math.max(0, slides.length - 1)
+        );
+        if (next === currentSlideIndex) return;
+        const route = parseSpatialRoute(
+          delta < 0
+            ? source?.dataset.previousRoute
+            : source?.dataset.nextRoute
+        );
+        resetPresentationFaces();
+        currentSlideIndex = next;
+        if (
+          delta < 0
+          && currentSlide()?.dataset.hasNote === "true"
+        ) {
+          setSlideFace(currentSlide(), "note");
+        }
+        updatePresentation(delta, true, route);
+        requestAnimationFrame(() => {
+          currentSlide()?.focus({ preventScroll: true });
+        });
+      };
+
+      const navigatePresentationTo = index => {
+        if (
+          !Number.isInteger(index)
+          || index < 0
+          || index >= slides.length
+          || index === currentSlideIndex
+        ) {
+          return;
+        }
+        const source = currentSlide();
+        let route = [];
+        if (index === currentSlideIndex - 1) {
+          route = parseSpatialRoute(source?.dataset.previousRoute);
+        } else if (index === currentSlideIndex + 1) {
+          route = parseSpatialRoute(source?.dataset.nextRoute);
+        } else {
+          route = [
+            slideMapPoint(source),
+            slideMapPoint(slides[index]),
+          ].filter(Boolean);
+        }
+        const direction = index < currentSlideIndex ? -1 : 1;
+        resetPresentationFaces();
+        currentSlideIndex = index;
+        updatePresentation(direction, true, route);
+        requestAnimationFrame(() => {
+          currentSlide()?.focus({ preventScroll: true });
+        });
+      };
+
+      const setMode = (mode, updateHash = true) => {
+        currentMode = mode === "presentation" ? "presentation" : "map";
+        const presents = currentMode === "presentation";
+        viewport.hidden = presents;
+        presentation.hidden = !presents;
+        mapModeButton.setAttribute("aria-pressed", String(!presents));
+        presentationModeButton.setAttribute("aria-pressed", String(presents));
+        progress.hidden = !presents;
+        if (presents) {
+          updatePresentation(0, updateHash);
+          requestAnimationFrame(() => currentSlide()?.focus());
+        } else {
+          resetPresentationFaces();
+          document
+            .querySelectorAll(
+              ".presentation-slide [data-youtube-host]"
+            )
+            .forEach(resetYouTube);
+          updatePresentationConnections();
+          if (updateHash) history.replaceState(null, "", "#map");
+          requestAnimationFrame(fit);
+        }
+      };
+
+      const toggleCurrentNote = () => {
+        const slide = currentSlide();
+        if (!slide || slide.dataset.hasNote !== "true") return;
+        const nextFace =
+          slide.dataset.face === "note" ? "node" : "note";
+        setSlideFace(slide, nextFace);
+        updatePresentation(0, true, []);
+        requestAnimationFrame(() => {
+          slide.focus({ preventScroll: true });
+        });
+      };
+
+      const openMapNodeNote = node => {
+        if (
+          currentMode !== "map"
+          || node?.dataset.hasNote !== "true"
+        ) return;
+        const index = slides.findIndex(
+          slide => slide.dataset.nodeId === node.dataset.nodeId
+        );
+        if (index < 0) return;
+        resetPresentationFaces();
+        currentSlideIndex = index;
+        setSlideFace(currentSlide(), "note");
+        setMode("presentation");
+      };
+
+      const clampScale = value =>
+        Math.min(maximumScale, Math.max(minimumScale, value));
+
+      const render = () => {
+        stage.style.transform =
+          `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
+      };
+
+      const centerAtScale = nextScale => {
+        const bounds = viewport.getBoundingClientRect();
+        scale = clampScale(nextScale);
+        offsetX = (bounds.width - mapWidth * scale) / 2;
+        offsetY = (bounds.height - mapHeight * scale) / 2;
+        render();
+      };
+
+      const fit = () => {
+        const bounds = viewport.getBoundingClientRect();
+        const padding = Math.min(
+          48,
+          Math.max(16, Math.min(bounds.width, bounds.height) * 0.05)
+        );
+        const availableWidth = Math.max(1, bounds.width - padding * 2);
+        const availableHeight = Math.max(1, bounds.height - padding * 2);
+        fitted = true;
+        centerAtScale(
+          Math.min(1, availableWidth / mapWidth, availableHeight / mapHeight)
+        );
+      };
+
+      const reset = () => {
+        fitted = false;
+        centerAtScale(1);
+      };
+
+      const zoomAt = (viewportX, viewportY, nextScale) => {
+        const clampedScale = clampScale(nextScale);
+        const safeScale = Math.max(scale, 0.01);
+        const documentX = (viewportX - offsetX) / safeScale;
+        const documentY = (viewportY - offsetY) / safeScale;
+        offsetX = viewportX - documentX * clampedScale;
+        offsetY = viewportY - documentY * clampedScale;
+        scale = clampedScale;
+        fitted = false;
+        render();
+      };
+
+      const zoomAtCenter = factor => {
+        const bounds = viewport.getBoundingClientRect();
+        zoomAt(bounds.width / 2, bounds.height / 2, scale * factor);
+      };
+
+      const pointerPosition = event => {
+        const bounds = viewport.getBoundingClientRect();
+        return {
+          x: event.clientX - bounds.left,
+          y: event.clientY - bounds.top
+        };
+      };
+
+      const twoPointerGesture = () => {
+        const points = Array.from(activePointers.values()).slice(0, 2);
+        if (points.length < 2) return null;
+        const [first, second] = points;
+        return {
+          x: (first.x + second.x) / 2,
+          y: (first.y + second.y) / 2,
+          distance: Math.hypot(second.x - first.x, second.y - first.y)
+        };
+      };
+
+      const applyPinch = (previous, current) => {
+        const safeScale = Math.max(scale, 0.01);
+        const documentX = (previous.x - offsetX) / safeScale;
+        const documentY = (previous.y - offsetY) / safeScale;
+        const factor =
+          previous.distance > 0 ? current.distance / previous.distance : 1;
+        const nextScale = clampScale(scale * factor);
+        offsetX = current.x - documentX * nextScale;
+        offsetY = current.y - documentY * nextScale;
+        scale = nextScale;
+        fitted = false;
+        render();
+      };
+
+      const registerTap = point => {
+        const now = performance.now();
+        if (
+          lastTap
+          && now - lastTap.time <= doubleTapDelay
+          && Math.hypot(point.x - lastTap.x, point.y - lastTap.y)
+            <= doubleTapDistance
+        ) {
+          lastTap = null;
+          fit();
+          return;
+        }
+        lastTap = { x: point.x, y: point.y, time: now };
+      };
+
+      viewport.addEventListener("wheel", event => {
+        event.preventDefault();
+        const bounds = viewport.getBoundingClientRect();
+        const lineMultiplier =
+          event.deltaMode === WheelEvent.DOM_DELTA_LINE ? 16 : 1;
+        const factor = Math.exp(-event.deltaY * lineMultiplier * 0.0015);
+        zoomAt(
+          event.clientX - bounds.left,
+          event.clientY - bounds.top,
+          scale * factor
+        );
+      }, { passive: false });
+
+      viewport.addEventListener("pointerdown", event => {
+        if (event.target.closest?.("button, a, iframe")) return;
+        if (
+          event.pointerType !== "touch"
+          && (!event.isPrimary || event.button !== 0)
+        ) return;
+        event.preventDefault();
+        const point = pointerPosition(event);
+        activePointers.set(event.pointerId, point);
+        const noteNode = event.target.closest?.(
+          '.node[data-has-note="true"]'
+        );
+        mapNodePointer = noteNode
+          ? {
+              pointerId: event.pointerId,
+              node: noteNode,
+              startX: point.x,
+              startY: point.y,
+              moved: false
+            }
+          : null;
+        if (event.pointerType === "touch" && activePointers.size === 1) {
+          tapCandidate = {
+            pointerId: event.pointerId,
+            startX: point.x,
+            startY: point.y,
+            startedAt: performance.now()
+          };
+        } else {
+          tapCandidate = null;
+        }
+        viewport.classList.add("dragging");
+        if (viewport.setPointerCapture) {
+          viewport.setPointerCapture(event.pointerId);
+        }
+      });
+
+      viewport.addEventListener("pointermove", event => {
+        const previousPoint = activePointers.get(event.pointerId);
+        if (!previousPoint) return;
+        event.preventDefault();
+        const previousGesture = twoPointerGesture();
+        const point = pointerPosition(event);
+        activePointers.set(event.pointerId, point);
+        if (
+          mapNodePointer?.pointerId === event.pointerId
+          && Math.hypot(
+            point.x - mapNodePointer.startX,
+            point.y - mapNodePointer.startY
+          ) > tapMoveThreshold
+        ) {
+          mapNodePointer.moved = true;
+        }
+
+        if (
+          tapCandidate?.pointerId === event.pointerId
+          && Math.hypot(
+            point.x - tapCandidate.startX,
+            point.y - tapCandidate.startY
+          ) > tapMoveThreshold
+        ) {
+          tapCandidate = null;
+        }
+
+        if (activePointers.size >= 2) {
+          tapCandidate = null;
+          if (mapNodePointer) mapNodePointer.moved = true;
+          const currentGesture = twoPointerGesture();
+          if (previousGesture && currentGesture) {
+            applyPinch(previousGesture, currentGesture);
+          }
+          return;
+        }
+
+        const deltaX = point.x - previousPoint.x;
+        const deltaY = point.y - previousPoint.y;
+        if (deltaX === 0 && deltaY === 0) return;
+        offsetX += deltaX;
+        offsetY += deltaY;
+        fitted = false;
+        render();
+      });
+
+      const endPointer = (event, cancelled = false) => {
+        const point = activePointers.get(event.pointerId);
+        if (!point) return;
+        const nodeActivation =
+          mapNodePointer?.pointerId === event.pointerId
+            ? mapNodePointer
+            : null;
+        const isTap =
+          !cancelled
+          && event.pointerType === "touch"
+          && activePointers.size === 1
+          && tapCandidate?.pointerId === event.pointerId
+          && performance.now() - tapCandidate.startedAt <= doubleTapDelay;
+
+        activePointers.delete(event.pointerId);
+        tapCandidate = null;
+        if (nodeActivation) mapNodePointer = null;
+        if (
+          !cancelled
+          && nodeActivation
+          && !nodeActivation.moved
+        ) {
+          openMapNodeNote(nodeActivation.node);
+        } else if (isTap) {
+          registerTap(point);
+        }
+        if (activePointers.size === 0) {
+          viewport.classList.remove("dragging");
+        }
+        if (viewport.hasPointerCapture(event.pointerId)) {
+          viewport.releasePointerCapture(event.pointerId);
+        }
+      };
+      viewport.addEventListener("pointerup", event => endPointer(event));
+      viewport.addEventListener(
+        "pointercancel",
+        event => endPointer(event, true)
+      );
+      viewport.addEventListener(
+        "lostpointercapture",
+        event => endPointer(event, true)
+      );
+      viewport.addEventListener("dblclick", fit);
+
+      document.addEventListener("keydown", event => {
+        const interactiveTarget = event.target.closest?.(
+          "button, a, input, textarea, iframe, [role=button]"
+        );
+        if (currentMode === "presentation") {
+          if (event.key === "Escape") {
+            event.preventDefault();
+            setMode("map");
+            return;
+          }
+          const previewTarget = event.target.closest?.(
+            '.presentation-slide[data-position="previous"],'
+            + '.presentation-slide[data-position="next"]'
+          );
+          if (
+            previewTarget
+            && (event.key === "Enter" || event.key === " ")
+          ) {
+            event.preventDefault();
+            navigatePresentation(
+              previewTarget.dataset.position === "previous" ? -1 : 1
+            );
+            return;
+          }
+          if (event.key.toLowerCase() === "n") {
+            event.preventDefault();
+            toggleCurrentNote();
+            return;
+          }
+          if (interactiveTarget && !previewTarget) return;
+          if (
+            event.key === "ArrowRight"
+            || event.key === "ArrowDown"
+            || event.key === " "
+            || event.key === "PageDown"
+          ) {
+            event.preventDefault();
+            navigatePresentation(1);
+          } else if (
+            event.key === "ArrowLeft"
+            || event.key === "ArrowUp"
+            || event.key === "PageUp"
+          ) {
+            event.preventDefault();
+            navigatePresentation(-1);
+          } else if (event.key === "Home") {
+            event.preventDefault();
+            resetPresentationFaces();
+            currentSlideIndex = 0;
+            updatePresentation(-1);
+            requestAnimationFrame(() => {
+              currentSlide()?.focus({ preventScroll: true });
+            });
+          } else if (event.key === "End") {
+            event.preventDefault();
+            resetPresentationFaces();
+            currentSlideIndex = Math.max(0, slides.length - 1);
+            if (currentSlide()?.dataset.hasNote === "true") {
+              setSlideFace(currentSlide(), "note");
+            }
+            updatePresentation(1);
+            requestAnimationFrame(() => {
+              currentSlide()?.focus({ preventScroll: true });
+            });
+          }
+          return;
+        }
+
+        const mapNoteNode = event.target.closest?.(
+          '.node[data-has-note="true"]'
+        );
+        if (
+          mapNoteNode
+          && (event.key === "Enter" || event.key === " ")
+        ) {
+          event.preventDefault();
+          openMapNodeNote(mapNoteNode);
+          return;
+        }
+        if (interactiveTarget) return;
+        if (event.key === "+" || event.key === "=") {
+          event.preventDefault();
+          zoomAtCenter(1.15);
+        } else if (event.key === "-") {
+          event.preventDefault();
+          zoomAtCenter(1 / 1.15);
+        } else if (event.key === "0") {
+          event.preventDefault();
+          reset();
+        } else if (event.key.toLowerCase() === "f") {
+          event.preventDefault();
+          fit();
+        }
+      });
+
+      const resizeViewport = () => {
+        const bounds = viewport.getBoundingClientRect();
+        const nextWidth = bounds.width;
+        const nextHeight = bounds.height;
+        if (fitted) {
+          fit();
+        } else {
+          offsetX += (nextWidth - viewportWidth) / 2;
+          offsetY += (nextHeight - viewportHeight) / 2;
+          render();
+        }
+        viewportWidth = nextWidth;
+        viewportHeight = nextHeight;
+        requestAnimationFrame(() => {
+          updatePresentationSpatialPositions();
+          updatePresentationConnections();
+        });
+      };
+      window.addEventListener("resize", resizeViewport);
+      window.visualViewport?.addEventListener("resize", resizeViewport);
+
+      mapModeButton.addEventListener("click", () => setMode("map"));
+      presentationModeButton.addEventListener(
+        "click",
+        () => setMode("presentation")
+      );
+      presentationStage.addEventListener("pointerdown", event => {
+        if (
+          currentMode !== "presentation"
+          || event.pointerType !== "touch"
+          || event.target.closest?.(
+            "button, a, iframe"
+          )
+        ) {
+          presentationSwipe = null;
+          return;
+        }
+        presentationSwipe = {
+          pointerId: event.pointerId,
+          x: event.clientX,
+          y: event.clientY,
+        };
+      });
+      presentationStage.addEventListener("pointerup", event => {
+        const start = presentationSwipe;
+        presentationSwipe = null;
+        if (!start || start.pointerId !== event.pointerId) return;
+        const dx = event.clientX - start.x;
+        const dy = event.clientY - start.y;
+        if (
+          Math.abs(dx) < 48
+          || Math.abs(dx) <= Math.abs(dy) * 1.2
+        ) {
+          return;
+        }
+        navigatePresentation(dx < 0 ? 1 : -1);
+      });
+      presentationStage.addEventListener(
+        "pointercancel",
+        () => { presentationSwipe = null; }
+      );
+
+      document.addEventListener("click", event => {
+        const youtube = event.target.closest?.("[data-youtube-play]");
+        if (youtube) {
+          event.preventDefault();
+          event.stopPropagation();
+          loadYouTube(
+            youtube.closest("[data-youtube-host]"),
+            true
+          );
+          return;
+        }
+
+        const slide = event.target.closest?.(".presentation-slide");
+        if (!slide || currentMode !== "presentation") return;
+        const index = slides.indexOf(slide);
+        if (index === currentSlideIndex) {
+          if (slide.dataset.face === "node") {
+            if (slide.dataset.hasNote === "true") {
+              toggleCurrentNote();
+            } else {
+              navigatePresentation(1);
+            }
+          }
+          return;
+        }
+        navigatePresentationTo(index);
+      });
+
+      const applyHash = () => {
+        if (location.hash.startsWith("#node=")) {
+          try {
+            const parameters = new URLSearchParams(
+              location.hash.slice(1)
+            );
+            const nodeID = parameters.get("node");
+            const index = slides.findIndex(
+              slide => slide.dataset.nodeId === nodeID
+            );
+            if (index >= 0) {
+              resetPresentationFaces();
+              currentSlideIndex = index;
+              if (
+                parameters.get("face") === "note"
+                && currentSlide()?.dataset.hasNote === "true"
+              ) {
+                setSlideFace(currentSlide(), "note");
+              }
+              setMode("presentation", false);
+              updatePresentation(0, false);
+              return;
+            }
+          } catch {
+            // A malformed shared hash must not prevent the viewer from
+            // initializing in its configured map/presentation mode.
+          }
+        }
+        if (location.hash === "#map") {
+          setMode("map", false);
+          return;
+        }
+        setMode(currentMode, false);
+      };
+      window.addEventListener("hashchange", applyHash);
+
+      requestAnimationFrame(() => {
+        updatePresentation(0, false);
+        applyHash();
+        if (currentMode === "map") fit();
+      });
+    })();
+  </script>
+</body>
+</html>

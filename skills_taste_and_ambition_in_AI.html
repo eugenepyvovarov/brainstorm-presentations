@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta
     http-equiv="Content-Security-Policy"
-    content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src 'sha256-R4nVWpBaRIeYXDf22t03rSBAX80NRSUXqXc4W3JeiEc='; frame-src https://www.youtube-nocookie.com; connect-src 'none'; media-src 'none'; font-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none';"
+    content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src 'sha256-E1ti7igV686gPIrS7ZEfiIBKf5SjRAVISnuI4ZXsmew='; frame-src https://www.youtube-nocookie.com; connect-src 'none'; media-src 'none'; font-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none';"
   >
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="dark">
@@ -1064,17 +1064,17 @@
     <button
       id="map-mode-button"
       type="button"
-      aria-pressed="true"
+      aria-pressed="false"
     >Map</button>
     <button
       id="presentation-mode-button"
       type="button"
-      aria-pressed="false"
+      aria-pressed="true"
     >Present</button>
     <span
       id="presentation-progress"
       aria-live="polite"
-      hidden
+      
     ></span>
   </nav>
   <a
@@ -1142,7 +1142,7 @@
     style="--canvas: #1E1E1E; --grid: #1E1E1E;"
     aria-label="Mind map: Skills, Taste &amp; Ambition in AI"
     aria-describedby="viewer-instructions"
-    
+    hidden
   >
     <p id="viewer-instructions" class="visually-hidden">
       Read-only Brainstorm mind map. Select a node with a note icon to flip between its title and bounded note back face. Drag with a mouse or one finger to pan. Use the mouse wheel or pinch with two fingers to zoom. Double-click, double-tap, or press F to fit; press 0 for 100 percent.
@@ -2844,7 +2844,7 @@
   <main
     id="presentation"
     aria-label="Brainstorm presentation"
-    hidden
+    
   >
     <p class="visually-hidden" id="presentation-instructions">
       Use the Previous and Next edge buttons, Left and Right, Up and Down, Space, Page Up, Page Down, Home, or End to move through every node and note step. Select any visible node to continue from it. Press N to move between the current node and its note. Press Escape to return to the map.
@@ -5383,7 +5383,7 @@
         document.getElementById("presentation-focus-layer");
       const mapWidth = Number(viewport.dataset.mapWidth);
       const mapHeight = Number(viewport.dataset.mapHeight);
-      let currentMode = "map";
+      let currentMode = "presentation";
       let currentSlideIndex = 0;
       const currentSlide = () => slides[currentSlideIndex] ?? null;
       const stepCountForSlide = slide =>
